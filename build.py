@@ -1,9 +1,6 @@
 """
-To build *.exe use the next command in the terminal:
-    (vision) D:/Projects/vision/biocell>   python build.py build
-
-To create an msi-installer:
-    (vision) D:/Projects/vision/biocell>   python build.py bdist_msi
+See build instructions:
+https://github.com/BSMU-ITLab/vision/blob/main/build.py
 """
 
 
