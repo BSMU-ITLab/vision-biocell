@@ -1,3 +1,57 @@
 [build-system]
-requires = ['setuptools>=42', 'wheel']
+requires = [ 'setuptools >= 61.0' ]
 build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'bsmu.biocell'
+dynamic = [ 'version' ]
+description = 'Application for detecting prostate cancer in prostate tissue biopsy scans'
+readme = 'README.md'
+requires-python = '>= 3.10'
+license = { file = 'LICENSE' }
+authors = [
+    { name = 'Ivan Kosik', email = 'ivankosik91@gmail.com' },
+    { name = 'Vadim Ermakov', email = 'kalazus@mail.ru' },
+]
+keywords = [
+    'prostate cancer detection',
+    'biopsy scans',
+    'tissue analysis',
+    'deep learning',
+    'image segmentation',
+    'medical imaging',
+]
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: Healthcare Industry',
+    'License :: OSI Approved :: BSD License',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Operating System :: OS Independent',
+    'Topic :: Software Development :: Version Control :: Git',
+]
+dependencies = [
+    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.18.5',
+]
+
+[project.urls]
+Homepage = 'https://github.com/BSMU-ITLab/vision-biocell'
+Repository = 'https://github.com/BSMU-ITLab/vision-biocell.git'
+Issues = 'https://github.com/BSMU-ITLab/vision-biocell/issues'
+
+[project.scripts]
+bsmu-biocell-c = 'bsmu.biocell.app.main:run_app'
+
+[project.gui-scripts]
+bsmu-biocell = 'bsmu.biocell.app.main:run_app'
+
+[tool.setuptools.dynamic]
+version = { attr = 'bsmu.biocell.app.__version__' }
+
+[tool.setuptools.packages.find]
+where = [ 'src' ]
+
+[tool.setuptools.package-data]
+'*' = [ '*.conf.yaml' ]
