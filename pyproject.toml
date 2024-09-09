@@ -11,7 +11,7 @@ requires-python = '>= 3.10'
 license = { file = 'LICENSE' }
 authors = [
     { name = 'Ivan Kosik', email = 'ivankosik91@gmail.com' },
-    { name = 'Vadim Ermakov', email = 'kalazus@mail.ru' },
+    { name = 'Vadzim Yermakou', email = 'kalazus@mail.ru' },
 ]
 keywords = [
     'prostate cancer detection',
@@ -33,7 +33,7 @@ classifiers = [
     'Topic :: Software Development :: Version Control :: Git',
 ]
 dependencies = [
-    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.18.5',
+    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.18.7',
 ]
 
 [project.urls]

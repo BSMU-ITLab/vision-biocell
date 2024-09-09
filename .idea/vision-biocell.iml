@@ -13,7 +13,7 @@
       <excludeFolder url="file://$MODULE_DIR$/libs" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
     </content>
-    <orderEntry type="jdk" jdkName="vision-py310" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="biocell-py310" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
