@@ -1,5 +1,5 @@
 gleason_3_segmenter_model:  # trained on Gleason >= 3
-  name: '2024.03.15-v4_4-segformer-edgenext-small-panda-empty-512x512-gl3.onnx'
+  name: '2024.07.31-v6-segformer-tu-edgenext-small-panda-empty-512x512-gl3.onnx'
   output_object_name: 'Gleason >= 3'
   output_object_short_name: 'G>=3'
   preload: false
@@ -8,10 +8,10 @@ gleason_3_segmenter_model:  # trained on Gleason >= 3
   channels_order: 'rgb'
   normalize: false
   preprocessing_mode: 'image-net-torch'
-  mask_binarization_threshold: 0.16
+  mask_binarization_threshold: 1.7346
 
 gleason_4_segmenter_model:  # trained on Gleason >= 4
-  name: '2024.03.15-v4_4-segformer-edgenext-small-panda-empty-512x512-gl4.onnx'
+  name: '2024.07.31-v6-segformer-tu-edgenext-small-panda-empty-512x512-gl4.onnx'
   output_object_name: 'Gleason >= 4'
   output_object_short_name: 'G>=4'
   preload: false
@@ -20,4 +20,4 @@ gleason_4_segmenter_model:  # trained on Gleason >= 4
   channels_order: 'rgb'
   normalize: false
   preprocessing_mode: 'image-net-torch'
-  mask_binarization_threshold: 1.26
+  mask_binarization_threshold: 0.6190
