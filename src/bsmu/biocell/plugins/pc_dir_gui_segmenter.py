@@ -6,15 +6,15 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QSize
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-    QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
+    QPushButton, QVBoxLayout, QWidget,
 )
 
 from bsmu.biocell.plugins.pc_segmenter import SegmentationMode
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.config import Config
-from bsmu.vision.core.image.base import FlatImage
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.image import FlatImage
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.task import DnnTask
 from bsmu.vision.plugins.loaders.image.wsi import WholeSlideImageFileLoader
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
@@ -24,8 +24,8 @@ if TYPE_CHECKING:
     from typing import Sequence
 
     from bsmu.biocell.plugins.pc_segmenter import PcSegmenter, PcSegmenterPlugin
-    from bsmu.vision.plugins.loaders.image.base import ImageFileLoader
-    from bsmu.vision.plugins.storages import TaskStorage, TaskStoragePlugin
+    from bsmu.vision.plugins.loaders.image import ImageFileLoader
+    from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
     from bsmu.vision.plugins.windows.main import MainWindow, MainWindowPlugin
 
 
@@ -42,7 +42,7 @@ class PcDirGuiSegmenterPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
         'main_window_plugin': 'bsmu.vision.plugins.windows.main.MainWindowPlugin',
         'pc_segmenter_plugin': 'bsmu.biocell.plugins.pc_segmenter.PcSegmenterPlugin',
-        'task_storage_plugin': 'bsmu.vision.plugins.storages.task_storage.TaskStoragePlugin',
+        'task_storage_plugin': 'bsmu.vision.plugins.storages.task.TaskStoragePlugin',
     }
 
     def __init__(

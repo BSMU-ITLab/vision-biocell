@@ -8,9 +8,9 @@ plugins:
 #  - bsmu.biocell.plugins.gui_dnn_tissue_segmenter.GuiDnnTissueSegmenterPlugin
 #  - bsmu.biocell.plugins.kidney_tissue_segmenter.BiocellKidneyTissueSegmenterPlugin
 
-  - bsmu.vision.plugins.overlayers.image.base.ImageViewerOverlayerPlugin
+  - bsmu.vision.plugins.overlayers.image.ImageViewerOverlayerPlugin
 
-  - bsmu.vision.plugins.tools.viewer.viewer_tool_manager.ViewerToolManagerPlugin
+  - bsmu.vision.plugins.tools.viewer.manager.ViewerToolManagerPlugin
   - bsmu.vision.plugins.tools.viewer.image.hand_tool.HandImageViewerToolPlugin
   - bsmu.biocell.plugins.hed_wsi_smart_brush.HedSmartBrushImageViewerToolPlugin
 

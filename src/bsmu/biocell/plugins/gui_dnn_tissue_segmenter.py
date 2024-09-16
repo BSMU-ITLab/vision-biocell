@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QMessageBox
 
-from bsmu.vision.core.image.base import FlatImage
+from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.image.layered import LayeredImage
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.visibility import Visibility
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
-from bsmu.vision.widgets.viewers.image.layered.base import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
 
 if TYPE_CHECKING:
     from bsmu.biocell.plugins.dnn_tissue_segmenter import DnnTissueSegmenter, DnnTissueSegmenterPlugin

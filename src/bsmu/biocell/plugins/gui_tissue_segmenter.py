@@ -17,12 +17,12 @@ from PySide6.QtWidgets import (
 from numpy.typing import DTypeLike
 
 from bsmu.vision.core.config import Config
-from bsmu.vision.core.image.base import FlatImage
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.image import FlatImage
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.visibility import Visibility
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu, FileMenu
 from bsmu.vision.plugins.writers.image.generic import GenericImageFileWriter
-from bsmu.vision.widgets.viewers.image.layered.base import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
 
 if TYPE_CHECKING:
     from bsmu.vision.core.image.layered import LayeredImage

@@ -14,10 +14,10 @@ import skimage.util
 from bsmu.vision.core.image import tile_splitter
 from ctypes import CDLL
 
-from bsmu.vision.core.models.base import ObjectParameter
+from bsmu.vision.core.models import ObjectParameter
 from bsmu.vision.core.models.table import TableColumn, TableItemDataRole
-from bsmu.vision.core.image.base import FlatImage
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.image import FlatImage
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
 from bsmu.vision.dnn.predictor import Predictor as DnnPredictor
 

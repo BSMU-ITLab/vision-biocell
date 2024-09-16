@@ -10,17 +10,17 @@ from PySide6.QtWidgets import QMessageBox
 from skimage import morphology
 
 from bsmu.vision.core.converters.image import normalized_uint8
-from bsmu.vision.core.image.base import FlatImage
+from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.palette import Palette
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
-from bsmu.vision.widgets.viewers.image.layered.base import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
 
 if TYPE_CHECKING:
     from bsmu.vision.plugins.windows.main import MainWindowPlugin, MainWindow
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin, Mdi
-    from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin, PalettePackSettings
-    from bsmu.vision.widgets.viewers.image.layered.base import LayeredImageViewer
+    from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
+    from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewer
 
 
 MASKS_LAYER_NAME = 'masks'

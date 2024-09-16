@@ -7,18 +7,20 @@ import numpy as np
 import skimage.color
 from PySide6.QtCore import Qt
 
-from bsmu.vision.plugins.tools.viewer.image.wsi_smart_brush import WsiSmartBrushImageViewerToolPlugin, \
-    WsiSmartBrushImageViewerTool, WsiSmartBrushImageViewerToolSettings, WsiSmartBrushImageViewerToolSettingsWidget
+from bsmu.vision.plugins.tools.viewer.image.wsi_smart_brush import (
+    WsiSmartBrushImageViewerTool, WsiSmartBrushImageViewerToolPlugin, WsiSmartBrushImageViewerToolSettings,
+    WsiSmartBrushImageViewerToolSettingsWidget,
+)
 
 if TYPE_CHECKING:
     from typing import Type
 
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
-    from bsmu.vision.plugins.tools.viewer.base import ViewerTool, ViewerToolSettings, ViewerToolSettingsWidget
+    from bsmu.vision.plugins.tools.viewer import ViewerTool, ViewerToolSettings, ViewerToolSettingsWidget
     from bsmu.vision.plugins.undo import UndoPlugin, UndoManager
     from bsmu.vision.plugins.windows.main import MainWindowPlugin
-    from bsmu.vision.widgets.viewers.image.layered.base import LayeredImageViewer
+    from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewer
 
 
 def normalize_between_0_1(array: np.ndarray) -> np.ndarray:

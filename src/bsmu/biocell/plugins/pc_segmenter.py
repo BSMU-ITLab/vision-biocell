@@ -13,16 +13,16 @@ from PySide6.QtCore import QObject
 
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.palette import Palette
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.task import DnnTask
 from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
 from bsmu.vision.dnn.segmenter import Segmenter as DnnSegmenter
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
-    from bsmu.vision.core.image.base import Image
+    from bsmu.vision.core.image import Image
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
-    from bsmu.vision.plugins.storages import TaskStorage, TaskStoragePlugin
+    from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
 
 
 class SegmentationMode(Enum):
@@ -61,7 +61,7 @@ _SEGMENTATION_MODE_TO_DISPLAY_SHORT_NAME = {
 class PcSegmenterPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
         'palette_pack_settings_plugin': 'bsmu.vision.plugins.palette.settings.PalettePackSettingsPlugin',
-        'task_storage_plugin': 'bsmu.vision.plugins.storages.task_storage.TaskStoragePlugin',
+        'task_storage_plugin': 'bsmu.vision.plugins.storages.task.TaskStoragePlugin',
     }
 
     _DNN_MODELS_DIR_NAME = 'dnn-models'

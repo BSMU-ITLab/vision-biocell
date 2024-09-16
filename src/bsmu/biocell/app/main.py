@@ -1,5 +1,5 @@
 from bsmu.biocell.app import __title__, __version__
-from bsmu.vision.app.base import App
+from bsmu.vision.app import App
 
 
 class BiocellApp(App):

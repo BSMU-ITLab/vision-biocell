@@ -8,13 +8,13 @@ import numpy as np
 from PySide6.QtCore import QObject
 
 from bsmu.biocell.plugins.pc_segmenter import SegmentationMode
-from bsmu.vision.core.image.base import FlatImage
+from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.image.layered import LayeredImage
 from bsmu.vision.core.palette import Palette
-from bsmu.vision.core.plugins.base import Plugin
+from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.visibility import Visibility
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
-from bsmu.vision.widgets.viewers.image.layered.base import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
 
 if TYPE_CHECKING:
     from typing import Sequence, Callable
@@ -22,10 +22,10 @@ if TYPE_CHECKING:
     from bsmu.biocell.plugins.pc_segmenter import PcSegmenter, PcGleasonSegmenter, PcSegmenterPlugin
     from bsmu.vision.core.data import Data
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin, Mdi
-    from bsmu.vision.widgets.mdi.windows.base import DataViewerSubWindow
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin, PalettePackSettings
-    from bsmu.vision.plugins.visualizers.manager import DataVisualizationManagerPlugin, DataVisualizationManager
     from bsmu.vision.plugins.windows.main import MainWindowPlugin, MainWindow
+    from bsmu.vision.plugins.visualizers.manager import DataVisualizationManagerPlugin, DataVisualizationManager
+    from bsmu.vision.widgets.mdi.windows.data import DataViewerSubWindow
 
 
 class PcGuiSegmenterPlugin(Plugin):
