@@ -16,8 +16,8 @@ plugins:
 
   - bsmu.vision.plugins.file_dropper.FileDropperPlugin
   - bsmu.vision.plugins.loaders.image.wsi.WholeSlideImageFileLoaderPlugin
-  - bsmu.vision.plugins.loaders.image.simple.SimpleImageFileLoaderPlugin
-  - bsmu.vision.plugins.writers.image.generic.GenericImageFileWriterPlugin
+  - bsmu.vision.plugins.loaders.image.common.CommonImageFileLoaderPlugin
+  - bsmu.vision.plugins.writers.image.common.CommonImageFileWriterPlugin
 
 #  - bsmu.biocell.plugins.gui_tissue_segmenter.GuiTissueSegmenterPlugin
 

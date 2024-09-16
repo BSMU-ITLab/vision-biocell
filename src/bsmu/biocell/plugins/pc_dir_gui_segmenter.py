@@ -18,7 +18,7 @@ from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.task import DnnTask
 from bsmu.vision.plugins.loaders.image.wsi import WholeSlideImageFileLoader
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
-from bsmu.vision.plugins.writers.image.generic import GenericImageFileWriter
+from bsmu.vision.plugins.writers.image.common import CommonImageFileWriter
 
 if TYPE_CHECKING:
     from typing import Sequence
@@ -283,7 +283,7 @@ class PcDirSegmentationTask(DnnTask):
     def _segment_dir_files(self):
         self._prepare_relative_image_paths()
 
-        image_file_writer = GenericImageFileWriter()
+        image_file_writer = CommonImageFileWriter()
         for self._finished_subtask_count, relative_image_path in enumerate(self._relative_image_paths):
             image_path = self._config.image_dir / relative_image_path
             file_loading_and_segmentation_task = PcFileLoadingAndSegmentationTask(

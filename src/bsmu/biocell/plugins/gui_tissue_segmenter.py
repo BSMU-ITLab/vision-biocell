@@ -21,7 +21,7 @@ from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.visibility import Visibility
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu, FileMenu
-from bsmu.vision.plugins.writers.image.generic import GenericImageFileWriter
+from bsmu.vision.plugins.writers.image.common import CommonImageFileWriter
 from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
 
 if TYPE_CHECKING:
@@ -322,7 +322,7 @@ class GuiTissueSegmenter(QObject):
 
         save_path = Path(save_path_str)
         try:
-            GenericImageFileWriter().write_to_file(
+            CommonImageFileWriter().write_to_file(
                 layered_image.layer_by_name(self._mask_layer_name).image, save_path)
             self._tissue_segmentation_config.save_to_yaml(save_path.with_suffix('.conf.yaml'))
         except Exception as e:
