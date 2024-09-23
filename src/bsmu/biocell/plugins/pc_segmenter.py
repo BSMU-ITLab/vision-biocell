@@ -247,6 +247,11 @@ class TiledSegmentationTask(DnnTask):
         self._mask_foreground_class = mask_foreground_class
         self._tile_weights = tile_weights
 
+        self._segmented_tile_count: int = 0
+        self._tile_row_count: int | None = None
+        self._tile_col_count: int | None = None
+        self._total_tile_count: int | None = None
+
     @property
     def model_params(self) -> DnnModelParams:
         return self._segmenter.model_params
@@ -275,24 +280,15 @@ class TiledSegmentationTask(DnnTask):
 
         tiled_image = self._tiled_image(padded_image, tile_size)
 
-        tile_row_count = tiled_image.shape[0]
-        tile_col_count = tiled_image.shape[1]
-        total_tile_count = tile_row_count * tile_col_count
-        segmented_tile_count = 0
-        for tile_row in range(tile_row_count):
-            for tile_col in range(tile_col_count):
-                # if self._is_cancelled:
-                #     return mask, weights
+        self._tile_row_count = tiled_image.shape[0]
+        self._tile_col_count = tiled_image.shape[1]
+        self._total_tile_count = self._tile_row_count * self._tile_col_count
 
-                tile = tiled_image[tile_row, tile_col]
-                tile_mask = self._segmenter.segment(tile)
-
-                row = tile_row * tile_size
-                col = tile_col * tile_size
-                padded_mask[row:(row + tile_size), col:(col + tile_size)] = tile_mask
-
-                segmented_tile_count += 1
-                self._change_step_progress(segmented_tile_count, total_tile_count)
+        segment_tiled_args = (tiled_image, tile_size, padded_mask)
+        if self._segmenter.model_params.batch_size == 1:
+            self._segment_tiled_individually(*segment_tiled_args)
+        else:
+            self._segment_tiled_in_batches(*segment_tiled_args)
 
         mask = self._unpad_image(padded_mask, pads)
 
@@ -307,6 +303,65 @@ class TiledSegmentationTask(DnnTask):
 
         logging.info(f'Segmentation finished. Elapsed time: {timer() - segmentation_start:.2f}')
         return mask, weights
+
+    def _segment_tiled_individually(self, tiled_image: np.ndarray, tile_size: int, padded_mask: np.ndarray):
+        for tile_row in range(self._tile_row_count):
+            for tile_col in range(self._tile_col_count):
+                # if self._is_cancelled:
+                #     return mask, weights
+
+                tile = tiled_image[tile_row, tile_col]
+                tile_mask = self._segmenter.segment(tile)
+
+                row = tile_row * tile_size
+                col = tile_col * tile_size
+                padded_mask[row:(row + tile_size), col:(col + tile_size)] = tile_mask
+
+                self._segmented_tile_count += 1
+                self._change_step_progress(self._segmented_tile_count, self._total_tile_count)
+
+    def _segment_tiled_in_batches(self, tiled_image: np.ndarray, tile_size: int, padded_mask: np.ndarray):
+        batch_size = self._segmenter.model_params.batch_size
+
+        tile_batch = []
+        tile_rc_batch = []
+
+        for tile_row in range(self._tile_row_count):
+            for tile_col in range(self._tile_col_count):
+                # if self._is_cancelled:
+                #     return mask, weights
+
+                tile = tiled_image[tile_row, tile_col]
+                tile_batch.append(tile)
+                tile_rc_batch.append((tile_row, tile_col))
+
+                if len(tile_batch) == batch_size:
+                    self._segment_tile_batch(tile_batch, tile_rc_batch, tile_size, padded_mask)
+
+        # Process any remaining tiles in the last batch
+        if tile_batch:
+            self._segment_tile_batch(tile_batch, tile_rc_batch, tile_size, padded_mask)
+
+    def _segment_tile_batch(
+            self,
+            tile_batch: list[np.ndarray],
+            tile_rc_batch: list[tuple[int, int]],
+            tile_size: int,
+            padded_mask: np.ndarray,
+    ):
+        tile_mask_batch = self._segmenter.segment_batch_without_postresize(tile_batch)
+
+        for tile_mask, (tile_mask_row, tile_mask_col) in zip(tile_mask_batch, tile_rc_batch):
+            mask_row = tile_mask_row * tile_size
+            mask_col = tile_mask_col * tile_size
+
+            padded_mask[mask_row:(mask_row + tile_size), mask_col:(mask_col + tile_size)] = tile_mask
+
+        self._segmented_tile_count += len(tile_batch)
+        self._change_step_progress(self._segmented_tile_count, self._total_tile_count)
+
+        tile_batch.clear()
+        tile_rc_batch.clear()
 
     @staticmethod
     def _padded_image_to_tile(

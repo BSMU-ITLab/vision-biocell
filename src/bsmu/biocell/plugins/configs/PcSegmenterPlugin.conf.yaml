@@ -3,6 +3,7 @@ gleason_3_segmenter_model:  # trained on Gleason >= 3
   output_object_name: 'Gleason >= 3'
   output_object_short_name: 'G>=3'
   preload: false
+  batch_size: 10
   input_size: [3, 512, 512]
   channels_axis: 0
   channels_order: 'rgb'
@@ -15,6 +16,7 @@ gleason_4_segmenter_model:  # trained on Gleason >= 4
   output_object_name: 'Gleason >= 4'
   output_object_short_name: 'G>=4'
   preload: false
+  batch_size: 10
   input_size: [3, 512, 512]
   channels_axis: 0
   channels_order: 'rgb'
