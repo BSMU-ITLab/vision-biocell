@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 
-from bsmu.vision.plugins.loaders.image.simple import SimpleImageFileLoader
+from bsmu.vision.plugins.loaders.image.common import CommonImageFileLoader
 
 if TYPE_CHECKING:
     from typing import Iterator
@@ -96,7 +96,7 @@ class Metrics:
 
 
 def load_mask(mask_path: Path) -> np.ndarray:
-    loader = SimpleImageFileLoader()
+    loader = CommonImageFileLoader()
     mask = loader.load_file(mask_path)
     return mask.pixels
 
@@ -202,7 +202,7 @@ def value_to_str_with_comma_decimal_separator(value: float) -> str:
 
 def main():
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('-d', '--masks_dir', type=Path, help='Path to the directory containing mask directories')
+    arg_parser.add_argument('-d', '--masks-dir', type=Path, help='Path to the directory containing mask directories')
     args = arg_parser.parse_args()
 
     masks_dir = args.masks_dir
