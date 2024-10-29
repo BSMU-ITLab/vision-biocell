@@ -33,7 +33,7 @@ classifiers = [
     'Topic :: Software Development :: Version Control :: Git',
 ]
 dependencies = [
-    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.18.7',
+    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.22.0',
 ]
 
 [project.urls]
@@ -48,10 +48,10 @@ bsmu-biocell-c = 'bsmu.biocell.app.main:run_app'
 bsmu-biocell = 'bsmu.biocell.app.main:run_app'
 
 [tool.setuptools.dynamic]
-version = { attr = 'bsmu.biocell.app.__version__' }
+version = { attr = 'bsmu.biocell.__version__' }
 
 [tool.setuptools.packages.find]
 where = [ 'src' ]
 
 [tool.setuptools.package-data]
-'*' = [ '*.conf.yaml' ]
+'*' = [ '**/*.conf.yaml' ]

@@ -326,7 +326,7 @@ class PcGleasonGuiSegmenter(MdiSegmenter):
                 mask,
                 FlatImage,
                 self._pc_gleason_segmenter.mask_palette,
-                Visibility(True, 0.5),
+                visibility=Visibility(True, 0.75),
             )
         elif mask_draw_mode == MaskDrawMode.OVERLAY_FOREGROUND:
             is_modified = mask == self.mask_foreground_class

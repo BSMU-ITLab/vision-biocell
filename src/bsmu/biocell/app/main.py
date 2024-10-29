@@ -1,13 +1,8 @@
-from bsmu.biocell.app import __title__, __version__
-from bsmu.vision.app import App
-
-
-class BiocellApp(App):
-    pass
+from bsmu.biocell.app import BiocellApp
 
 
 def run_app():
-    app = BiocellApp(__title__, __version__)
+    app = BiocellApp()
     app.run()
 
 
