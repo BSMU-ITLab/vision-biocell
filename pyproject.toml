@@ -1,5 +1,5 @@
 [build-system]
-requires = [ 'setuptools >= 61.0' ]
+requires = [ 'setuptools >= 69.0' ]
 build-backend = 'setuptools.build_meta'
 
 [project]
@@ -33,7 +33,7 @@ classifiers = [
     'Topic :: Software Development :: Version Control :: Git',
 ]
 dependencies = [
-    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.22.0',
+    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.27.0',
 ]
 
 [project.urls]

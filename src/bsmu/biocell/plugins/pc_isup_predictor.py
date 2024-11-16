@@ -28,14 +28,14 @@ if TYPE_CHECKING:
 
     from bsmu.vision.core.bbox import BBox
     from bsmu.vision.core.data import Data
-    from bsmu.vision.plugins.loaders.manager import FileLoadingManagerPlugin, FileLoadingManager
+    from bsmu.vision.plugins.readers.manager import FileReadingManagerPlugin, FileReadingManager
     from bsmu.vision.plugins.visualizers.manager import DataVisualizationManagerPlugin, DataVisualizationManager
 
 
 class BiocellPcIsupPredictorPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
-        'file_loading_manager_plugin':
-            'bsmu.vision.plugins.loaders.manager.FileLoadingManagerPlugin',
+        'file_reading_manager_plugin':
+            'bsmu.vision.plugins.readers.manager.FileReadingManagerPlugin',
         'data_visualization_manager_plugin':
             'bsmu.vision.plugins.visualizers.manager.DataVisualizationManagerPlugin',
     }
@@ -45,13 +45,13 @@ class BiocellPcIsupPredictorPlugin(Plugin):
 
     def __init__(
             self,
-            file_loading_manager_plugin: FileLoadingManagerPlugin,
+            file_reading_manager_plugin: FileReadingManagerPlugin,
             data_visualization_manager_plugin: DataVisualizationManagerPlugin,
     ):
         super().__init__()
 
-        self._file_loading_manager_plugin = file_loading_manager_plugin
-        self._file_loading_manager: FileLoadingManager | None = None
+        self._file_reading_manager_plugin = file_reading_manager_plugin
+        self._file_reading_manager: FileReadingManager | None = None
 
         self._data_visualization_manager_plugin = data_visualization_manager_plugin
         self._data_visualization_manager: DataVisualizationManager
@@ -63,7 +63,7 @@ class BiocellPcIsupPredictorPlugin(Plugin):
         return self._pc_isup_predictor
 
     def _enable(self):
-        self._file_loading_manager = self._file_loading_manager_plugin.file_loading_manager
+        self._file_reading_manager = self._file_reading_manager_plugin.file_reading_manager
         self._data_visualization_manager = self._data_visualization_manager_plugin.data_visualization_manager
 
         model_1_params = DnnModelParams.from_config(
@@ -78,12 +78,12 @@ class BiocellPcIsupPredictorPlugin(Plugin):
         # self._table_visualizer.add_column(MsPredictionScoreTableColumn, ms_prediction_score_item_delegate)
         # self._table_visualizer.journal.record_added.connect(self._ms_predictor.add_observed_record)
         # self._table_visualizer.journal.record_removing.connect(self._ms_predictor.remove_observed_record)
-        self._file_loading_manager.file_loaded.connect(self._pc_isup_predictor.predict)
+        self._file_reading_manager.file_read.connect(self._pc_isup_predictor.predict)
 
     def _disable(self):
         self._pc_isup_predictor = None
 
-        self._file_loading_manager = None
+        self._file_reading_manager = None
 
         raise NotImplementedError
 

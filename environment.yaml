@@ -17,7 +17,7 @@ dependencies:
   - xz=5.4.6=h8cc25b3_1
   - zlib=1.2.13=h8cc25b3_1
   - pip:
-      - git+https://github.com/BSMU-ITLab/vision.git@v0.22.0
+      - git+https://github.com/BSMU-ITLab/vision.git@v0.27.0
       - coloredlogs==15.0.1
       - cx-freeze==7.2.0
       - cx-logging==3.2.0

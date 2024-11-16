@@ -2,37 +2,36 @@ plugins:
   - bsmu.biocell.plugins.main_window.BiocellMainWindowPlugin:
       replace: bsmu.vision.plugins.windows.main.MainWindowPlugin
       alias: main_window
-#  - bsmu.biocell.plugins.pc_isup_predictor.BiocellPcIsupPredictorPlugin
-  - bsmu.biocell.plugins.pc_gui_segmenter.PcGuiSegmenterPlugin
-  - bsmu.biocell.plugins.pc_dir_gui_segmenter.PcDirGuiSegmenterPlugin
-#  - bsmu.biocell.plugins.gui_dnn_tissue_segmenter.GuiDnnTissueSegmenterPlugin
-#  - bsmu.biocell.plugins.kidney_tissue_segmenter.BiocellKidneyTissueSegmenterPlugin
+
+  - bsmu.vision.plugins.file_dropper.FileDropperPlugin
+  - bsmu.vision.plugins.readers.image.common.CommonImageFileReaderPlugin
+  - bsmu.vision.plugins.readers.image.wsi.WholeSlideImageFileReaderPlugin
+
+  - bsmu.vision.plugins.postread.image_to_layered.ImageToLayeredImagePostReadConverterPlugin
+
+  - bsmu.vision.plugins.visualizers.image.flat.FlatImageVisualizerPlugin
+  - bsmu.vision.plugins.visualizers.image.layered.LayeredImageVisualizerPlugin
 
   - bsmu.vision.plugins.overlayers.image.ImageViewerOverlayerPlugin
+#  - bsmu.vision.plugins.overlayers.path.ImageViewerPathOverlayerPlugin
+#  - bsmu.vision.plugins.overlayers.intersection.ImageViewerIntersectionOverlayerPlugin
+
+  - bsmu.vision.plugins.writers.image.common.CommonImageFileWriterPlugin
 
   - bsmu.vision.plugins.tools.viewer.manager.ViewerToolManagerPlugin
   - bsmu.vision.plugins.tools.viewer.image.hand_tool.HandImageViewerToolPlugin
   - bsmu.biocell.plugins.hed_wsi_smart_brush.HedSmartBrushImageViewerToolPlugin
 
-  - bsmu.vision.plugins.file_dropper.FileDropperPlugin
-  - bsmu.vision.plugins.loaders.image.wsi.WholeSlideImageFileLoaderPlugin
-  - bsmu.vision.plugins.loaders.image.common.CommonImageFileLoaderPlugin
-  - bsmu.vision.plugins.writers.image.common.CommonImageFileWriterPlugin
-
+#  - bsmu.biocell.plugins.pc_isup_predictor.BiocellPcIsupPredictorPlugin
+  - bsmu.biocell.plugins.pc_gui_segmenter.PcGuiSegmenterPlugin
+  - bsmu.biocell.plugins.pc_dir_gui_segmenter.PcDirGuiSegmenterPlugin
+#  - bsmu.biocell.plugins.gui_dnn_tissue_segmenter.GuiDnnTissueSegmenterPlugin
+#  - bsmu.biocell.plugins.kidney_tissue_segmenter.BiocellKidneyTissueSegmenterPlugin
 #  - bsmu.biocell.plugins.gui_tissue_segmenter.GuiTissueSegmenterPlugin
 
-  - bsmu.vision.plugins.post_load_converters.image_to_layered.ImageToLayeredImagePostLoadConverterPlugin
-  - bsmu.vision.plugins.visualizers.image.layered.LayeredImageVisualizerPlugin
-  - bsmu.vision.plugins.visualizers.image.flat.FlatImageVisualizerPlugin
+#  - bsmu.vision.plugins.walkers.file.MdiImageLayerFileWalkerPlugin
 
   - bsmu.vision.plugins.layer_controller.MdiImageViewerLayerControllerPlugin
   - bsmu.vision.plugins.layers_view.LayersTableViewPlugin
+
   - bsmu.vision.plugins.task_storage_view.TaskStorageViewPlugin
-
-  - bsmu.vision.plugins.undo.UndoPlugin
-
-#  - bsmu.vision.plugins.walkers.file.MdiImageLayerFileWalkerPlugin
-#  - bsmu.vision.plugins.tools.viewer.image.smart_brush.SmartBrushImageViewerToolPlugin
-#  - bsmu.vision.plugins.tools.viewer.image.wsi_smart_brush.WsiSmartBrushImageViewerToolPlugin
-#  - bsmu.vision.plugins.overlayers.path.ImageViewerPathOverlayerPlugin
-#  - bsmu.vision.plugins.overlayers.intersection.ImageViewerIntersectionOverlayerPlugin

@@ -16,7 +16,7 @@ from bsmu.vision.core.config import Config
 from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.task import DnnTask
-from bsmu.vision.plugins.loaders.image.wsi import WholeSlideImageFileLoader
+from bsmu.vision.plugins.readers.image.wsi import WholeSlideImageFileReader
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
 from bsmu.vision.plugins.writers.image.common import CommonImageFileWriter
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from typing import Sequence
 
     from bsmu.biocell.plugins.pc_segmenter import PcSegmenter, PcSegmenterPlugin
-    from bsmu.vision.plugins.loaders.image import ImageFileLoader
+    from bsmu.vision.plugins.readers.image import ImageFileReader
     from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
     from bsmu.vision.plugins.windows.main import MainWindow, MainWindowPlugin
 
@@ -248,12 +248,12 @@ class PcDirSegmenter(QObject):
         if (not config.image_dir.is_dir()) or (config.mask_dir.exists() and not config.mask_dir.is_dir()):
             return False
 
-        wsi_file_loader = WholeSlideImageFileLoader()
+        wsi_file_reader = WholeSlideImageFileReader()
         pc_dir_segmentation_task_name = (
             self.tr(f'PC Dir {config.segmentation_mode.short_name_with_postfix} [{config.image_dir.name}]')
         )
         pc_dir_segmentation_task = PcDirSegmentationTask(
-            config, wsi_file_loader, self._pc_segmenter, pc_dir_segmentation_task_name)
+            config, wsi_file_reader, self._pc_segmenter, pc_dir_segmentation_task_name)
         if self._task_storage is not None:
             self._task_storage.add_item(pc_dir_segmentation_task)
         ThreadPool.run_async_task(pc_dir_segmentation_task)
@@ -264,14 +264,14 @@ class PcDirSegmentationTask(DnnTask):
     def __init__(
             self,
             config: DirSegmentationConfig,
-            file_loader: ImageFileLoader,
+            file_reader: ImageFileReader,
             pc_segmenter: PcSegmenter,
             name: str = '',
     ):
         super().__init__(name)
 
         self._config = config
-        self._file_loader = file_loader
+        self._file_reader = file_reader
         self._pc_segmenter = pc_segmenter
 
         self._finished_subtask_count = 0
@@ -286,12 +286,12 @@ class PcDirSegmentationTask(DnnTask):
         image_file_writer = CommonImageFileWriter()
         for self._finished_subtask_count, relative_image_path in enumerate(self._relative_image_paths):
             image_path = self._config.image_dir / relative_image_path
-            file_loading_and_segmentation_task = PcFileLoadingAndSegmentationTask(
-                image_path, self._file_loader, self._pc_segmenter, self._config.segmentation_mode)
-            file_loading_and_segmentation_task.progress_changed.connect(
-                self._on_file_loading_and_segmentation_subtask_progress_changed)
-            file_loading_and_segmentation_task.run()
-            mask = file_loading_and_segmentation_task.result
+            file_reading_and_segmentation_task = PcFileReadingAndSegmentationTask(
+                image_path, self._file_reader, self._pc_segmenter, self._config.segmentation_mode)
+            file_reading_and_segmentation_task.progress_changed.connect(
+                self._on_file_reading_and_segmentation_subtask_progress_changed)
+            file_reading_and_segmentation_task.run()
+            mask = file_reading_and_segmentation_task.result
             mask_path = self._assemble_mask_path(relative_image_path)
             image_file_writer.write_to_file(FlatImage(mask), mask_path, mkdir=True)
 
@@ -299,7 +299,7 @@ class PcDirSegmentationTask(DnnTask):
         pattern = '**/*' if self._config.include_subdirs else '*'
         self._relative_image_paths = []
         for image_path in self._config.image_dir.glob(pattern):
-            if not (image_path.is_file() and self._file_loader.can_load(image_path)):
+            if not (image_path.is_file() and self._file_reader.can_read(image_path)):
                 continue
 
             relative_image_path = image_path.relative_to(self._config.image_dir)
@@ -313,15 +313,15 @@ class PcDirSegmentationTask(DnnTask):
     def _assemble_mask_path(self, relative_image_path: Path) -> Path:
         return self._config.mask_dir / relative_image_path.with_suffix('.png')
 
-    def _on_file_loading_and_segmentation_subtask_progress_changed(self, progress: float):
+    def _on_file_reading_and_segmentation_subtask_progress_changed(self, progress: float):
         self._change_subtask_based_progress(self._finished_subtask_count, len(self._relative_image_paths), progress)
 
 
-class PcFileLoadingAndSegmentationTask(DnnTask):
+class PcFileReadingAndSegmentationTask(DnnTask):
     def __init__(
             self,
             image_path: Path,
-            image_file_loader: ImageFileLoader,
+            image_file_reader: ImageFileReader,
             pc_segmenter: PcSegmenter,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             name: str = ''
@@ -329,15 +329,15 @@ class PcFileLoadingAndSegmentationTask(DnnTask):
         super().__init__(name)
 
         self._image_path = image_path
-        self._image_file_loader = image_file_loader
+        self._image_file_reader = image_file_reader
         self._pc_segmenter = pc_segmenter
         self._segmentation_mode = segmentation_mode
 
     def _run(self):
-        return self._load_and_segment()
+        return self._read_and_segment()
 
-    def _load_and_segment(self):
-        image = self._image_file_loader.load_file(self._image_path)
+    def _read_and_segment(self):
+        image = self._image_file_reader.read_file(self._image_path)
         pc_segmentation_task = self._pc_segmenter.create_segmentation_task(image, self._segmentation_mode)
         pc_segmentation_task.progress_changed.connect(self.progress_changed)
         pc_segmentation_task.run()

@@ -6,12 +6,12 @@ from pathlib import Path
 import cv2 as cv
 import numpy as np
 
-from bsmu.vision.plugins.loaders.image.common import CommonImageFileLoader
+from bsmu.vision.plugins.readers.image.common import CommonImageFileReader
 
 
-def load_mask(mask_path: Path) -> np.ndarray:
-    loader = CommonImageFileLoader()
-    mask = loader.load_file(mask_path)
+def read_mask(mask_path: Path) -> np.ndarray:
+    reader = CommonImageFileReader()
+    mask = reader.read_file(mask_path)
     return mask.pixels
 
 
@@ -38,8 +38,8 @@ def main():
         combined_mask_path = masks_dir / combined_mask_dir_name / main_mask_path.name
         important_regions_mask_path = masks_dir / important_regions_mask_dir_name / main_mask_path.name
 
-        main_mask = load_mask(main_mask_path)
-        tissue_mask = load_mask(tissue_mask_path)
+        main_mask = read_mask(main_mask_path)
+        tissue_mask = read_mask(tissue_mask_path)
 
         # non_tissue_mask = np.zeros_like(tissue_mask)
         # non_tissue_mask[tissue_mask != 1] = 255

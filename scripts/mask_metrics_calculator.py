@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 
-from bsmu.vision.plugins.loaders.image.common import CommonImageFileLoader
+from bsmu.vision.plugins.readers.image.common import CommonImageFileReader
 
 if TYPE_CHECKING:
     from typing import Iterator
@@ -95,9 +95,9 @@ class Metrics:
         return self._calculate_metric(self.tp, self.tp + self.fp, zero_division)
 
 
-def load_mask(mask_path: Path) -> np.ndarray:
-    loader = CommonImageFileLoader()
-    mask = loader.load_file(mask_path)
+def read_mask(mask_path: Path) -> np.ndarray:
+    reader = CommonImageFileReader()
+    mask = reader.read_file(mask_path)
     return mask.pixels
 
 
@@ -144,7 +144,7 @@ def calculate_mask_metrics_in_dir(
             continue
 
         print(f'Processing mask: {gt_mask_path.name}')
-        gt_mask = load_mask(gt_mask_path)
+        gt_mask = read_mask(gt_mask_path)
         gt_mask = filter_mask_classes(gt_mask)
 
         prediction_dir_name_to_metrics = {}
@@ -153,7 +153,7 @@ def calculate_mask_metrics_in_dir(
             if not prediction_mask_path.is_file():
                 raise FileNotFoundError(f'Prediction mask file not found: {prediction_mask_path}')
 
-            prediction_mask = load_mask(prediction_mask_path)
+            prediction_mask = read_mask(prediction_mask_path)
             prediction_mask = filter_mask_classes(prediction_mask)
 
             metrics = calculate_mask_metrics(gt_mask, prediction_mask)
