@@ -33,7 +33,7 @@ classifiers = [
     'Topic :: Software Development :: Version Control :: Git',
 ]
 dependencies = [
-    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.27.0',
+    'bsmu.vision[common,nn_inference,wsi,build] @ git+https://github.com/BSMU-ITLab/vision.git@v0.27.1',
 ]
 
 [project.urls]

@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="vision-py310" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="biocell-py310" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="biocell-py311" project-jdk-type="Python SDK" />
 </project>
