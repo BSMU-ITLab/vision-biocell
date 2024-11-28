@@ -27,7 +27,7 @@ MASKS_LAYER_NAME = 'masks'
 SEGMENT_TISSUE_ACTION_NAME = 'Segment Tissue - Stain Separation'
 
 
-class BiocellKidneyTissueSegmenterPlugin(Plugin):
+class KidneyTissueSegmenterPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
         'main_window_plugin': 'bsmu.vision.plugins.windows.main.MainWindowPlugin',
         'mdi_plugin': 'bsmu.vision.plugins.doc_interfaces.mdi.MdiPlugin',
@@ -50,11 +50,11 @@ class BiocellKidneyTissueSegmenterPlugin(Plugin):
 
         self._palette_pack_settings_plugin = palette_pack_settings_plugin
 
-        self._kidney_tissue_segmenter: BiocellKidneyTissueSegmenter | None = None
+        self._kidney_tissue_segmenter: KidneyTissueSegmenter | None = None
 
     def _enable(self):
         main_palette = self._palette_pack_settings_plugin.settings.main_palette
-        self._kidney_tissue_segmenter = BiocellKidneyTissueSegmenter(main_palette)
+        self._kidney_tissue_segmenter = KidneyTissueSegmenter(main_palette)
 
     def _enable_gui(self):
         self._main_window = self._main_window_plugin.main_window
@@ -101,7 +101,7 @@ def show_rgb(rgb: np.ndarray, title: str = ''):
     cv.imshow(title, cv.cvtColor(rgb, cv.COLOR_RGB2BGR))
 
 
-class BiocellKidneyTissueSegmenter(QObject):
+class KidneyTissueSegmenter(QObject):
     def __init__(self, mask_palette: Palette):
         super().__init__()
 

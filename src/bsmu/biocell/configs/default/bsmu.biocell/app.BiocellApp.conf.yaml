@@ -1,5 +1,5 @@
 plugins:
-  - bsmu.biocell.plugins.main_window.BiocellMainWindowPlugin:
+  - bsmu.biocell.plugins.gui.main_window.BiocellMainWindowPlugin:
       replace: bsmu.vision.plugins.windows.main.MainWindowPlugin
       alias: main_window
 
@@ -20,14 +20,13 @@ plugins:
 
   - bsmu.vision.plugins.tools.viewer.manager.ViewerToolManagerPlugin
   - bsmu.vision.plugins.tools.viewer.image.hand_tool.HandImageViewerToolPlugin
-  - bsmu.biocell.plugins.hed_wsi_smart_brush.HedSmartBrushImageViewerToolPlugin
+  - bsmu.biocell.plugins.tools.hed_wsi_smart_brush.HedSmartBrushImageViewerToolPlugin
 
-#  - bsmu.biocell.plugins.pc_isup_predictor.BiocellPcIsupPredictorPlugin
-  - bsmu.biocell.plugins.pc_gui_segmenter.PcGuiSegmenterPlugin
-  - bsmu.biocell.plugins.pc_dir_gui_segmenter.PcDirGuiSegmenterPlugin
-#  - bsmu.biocell.plugins.gui_dnn_tissue_segmenter.GuiDnnTissueSegmenterPlugin
-#  - bsmu.biocell.plugins.kidney_tissue_segmenter.BiocellKidneyTissueSegmenterPlugin
-#  - bsmu.biocell.plugins.gui_tissue_segmenter.GuiTissueSegmenterPlugin
+  - bsmu.biocell.plugins.gui.pca_segmenter.PcaSegmenterGuiPlugin
+  - bsmu.biocell.plugins.gui.pca_dir_segmenter.PcaDirSegmenterGuiPlugin
+#  - bsmu.biocell.plugins.gui.tissue_dnn_segmenter.TissueDnnSegmenterGuiPlugin
+#  - bsmu.biocell.plugins.gui.tissue_threshold_segmenter.TissueThresholdSegmenterGuiPlugin
+#  - bsmu.biocell.plugins.kidney_tissue_segmenter.KidneyTissueSegmenterPlugin
 
 #  - bsmu.vision.plugins.walkers.file.MdiImageLayerFileWalkerPlugin
 

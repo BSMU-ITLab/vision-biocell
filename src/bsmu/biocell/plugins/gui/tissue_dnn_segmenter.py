@@ -14,17 +14,17 @@ from bsmu.vision.plugins.windows.main import AlgorithmsMenu
 from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
 
 if TYPE_CHECKING:
-    from bsmu.biocell.plugins.dnn_tissue_segmenter import DnnTissueSegmenter, DnnTissueSegmenterPlugin
+    from bsmu.biocell.plugins.tissue_dnn_segmenter import TissueSegmenter, TissueDnnSegmenterPlugin
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin, Mdi
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin, PalettePackSettings
     from bsmu.vision.plugins.windows.main import MainWindowPlugin, MainWindow
 
 
-class GuiDnnTissueSegmenterPlugin(Plugin):
+class TissueDnnSegmenterGuiPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
         'main_window_plugin': 'bsmu.vision.plugins.windows.main.MainWindowPlugin',
         'mdi_plugin': 'bsmu.vision.plugins.doc_interfaces.mdi.MdiPlugin',
-        'dnn_tissue_segmenter_plugin': 'bsmu.biocell.plugins.dnn_tissue_segmenter.DnnTissueSegmenterPlugin',
+        'tissue_dnn_segmenter_plugin': 'bsmu.biocell.plugins.tissue_dnn_segmenter.TissueDnnSegmenterPlugin',
         'palette_pack_settings_plugin': 'bsmu.vision.plugins.palette.settings.PalettePackSettingsPlugin',
     }
 
@@ -32,7 +32,7 @@ class GuiDnnTissueSegmenterPlugin(Plugin):
             self,
             main_window_plugin: MainWindowPlugin,
             mdi_plugin: MdiPlugin,
-            dnn_tissue_segmenter_plugin: DnnTissueSegmenterPlugin,
+            tissue_dnn_segmenter_plugin: TissueDnnSegmenterPlugin,
             palette_pack_settings_plugin: PalettePackSettingsPlugin,
     ):
         super().__init__()
@@ -42,34 +42,34 @@ class GuiDnnTissueSegmenterPlugin(Plugin):
 
         self._mdi_plugin = mdi_plugin
 
-        self._dnn_tissue_segmenter_plugin = dnn_tissue_segmenter_plugin
+        self._tissue_dnn_segmenter_plugin = tissue_dnn_segmenter_plugin
 
         self._palette_pack_settings_plugin = palette_pack_settings_plugin
         self._palette_pack_settings: PalettePackSettings | None = None
 
-        self._gui_dnn_tissue_segmenter: GuiDnnTissueSegmenter | None = None
+        self._tissue_segmenter_gui: TissueSegmenterGui | None = None
 
     @property
-    def gui_dnn_tissue_segmenter(self) -> GuiDnnTissueSegmenter | None:
-        return self._gui_dnn_tissue_segmenter
+    def tissue_segmenter_gui(self) -> TissueSegmenterGui | None:
+        return self._tissue_segmenter_gui
 
     def _enable_gui(self):
         self._main_window = self._main_window_plugin.main_window
         mdi = self._mdi_plugin.mdi
 
-        self._gui_dnn_tissue_segmenter = GuiDnnTissueSegmenter(
-            self._dnn_tissue_segmenter_plugin.dnn_tissue_segmenter,
+        self._tissue_segmenter_gui = TissueSegmenterGui(
+            self._tissue_dnn_segmenter_plugin.tissue_segmenter,
             mdi,
         )
 
         self._main_window.add_menu_action(
             AlgorithmsMenu,
             self.tr('Segment Tissue Using DNN'),
-            partial(self._gui_dnn_tissue_segmenter.segment, mask_layer_name='masks'),
+            partial(self._tissue_segmenter_gui.segment, mask_layer_name='masks'),
         )
 
     def _disable(self):
-        self._gui_dnn_tissue_segmenter = None
+        self._tissue_segmenter_gui = None
 
         self._main_window = None
 
@@ -89,19 +89,19 @@ class MdiSegmenter(QObject):
         return layered_image_viewer_sub_window and layered_image_viewer_sub_window.layered_image_viewer.data
 
 
-class GuiDnnTissueSegmenter(MdiSegmenter):
-    def __init__(self, dnn_tissue_segmenter: DnnTissueSegmenter, mdi: Mdi):
+class TissueSegmenterGui(MdiSegmenter):
+    def __init__(self, tissue_segmenter: TissueSegmenter, mdi: Mdi):
         super().__init__(mdi)
 
-        self._dnn_tissue_segmenter = dnn_tissue_segmenter
+        self._tissue_segmenter = tissue_segmenter
 
     @property
     def mask_foreground_class(self) -> int:
-        return self._dnn_tissue_segmenter.mask_foreground_class
+        return self._tissue_segmenter.mask_foreground_class
 
     @property
     def mask_background_class(self) -> int:
-        return self._dnn_tissue_segmenter.mask_background_class
+        return self._tissue_segmenter.mask_background_class
 
     def segment(self, mask_layer_name: str):
         layered_image = self._active_layered_image()
@@ -123,12 +123,12 @@ class GuiDnnTissueSegmenter(MdiSegmenter):
 
         image_layer = layered_image.layers[0]
         image = image_layer.image
-        mask = self._dnn_tissue_segmenter.segment(image.pixels)
+        mask = self._tissue_segmenter.segment(image.pixels)
 
         layered_image.add_layer_or_modify_pixels(
             mask_layer_name,
             mask,
             FlatImage,
-            self._dnn_tissue_segmenter.mask_palette,
-            Visibility(True, 0.5),
+            self._tissue_segmenter.mask_palette,
+            visibility=Visibility(True, 0.5),
         )

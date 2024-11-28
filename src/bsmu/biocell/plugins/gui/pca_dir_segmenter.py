@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -10,45 +9,28 @@ from PySide6.QtWidgets import (
     QPushButton, QVBoxLayout, QWidget,
 )
 
-from bsmu.biocell.plugins.pc_segmenter import SegmentationMode
-from bsmu.vision.core.concurrent import ThreadPool
-from bsmu.vision.core.config import Config
-from bsmu.vision.core.image import FlatImage
+from bsmu.biocell.plugins.pca_dir_segmenter import DirSegmentationConfig, PcaDirSegmenter
+from bsmu.biocell.plugins.pca_segmenter import SegmentationMode
 from bsmu.vision.core.plugins import Plugin
-from bsmu.vision.core.task import DnnTask
-from bsmu.vision.plugins.readers.image.wsi import WholeSlideImageFileReader
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
-from bsmu.vision.plugins.writers.image.common import CommonImageFileWriter
 
 if TYPE_CHECKING:
-    from typing import Sequence
-
-    from bsmu.biocell.plugins.pc_segmenter import PcSegmenter, PcSegmenterPlugin
-    from bsmu.vision.plugins.readers.image import ImageFileReader
+    from bsmu.biocell.plugins.pca_segmenter import PcaSegmenter, PcaSegmenterPlugin
     from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
     from bsmu.vision.plugins.windows.main import MainWindow, MainWindowPlugin
 
 
-@dataclass
-class DirSegmentationConfig(Config):
-    image_dir: Path = field(default_factory=Path)
-    mask_dir: Path = field(default_factory=Path)
-    include_subdirs: bool = True
-    overwrite_existing_masks: bool = False
-    segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY
-
-
-class PcDirGuiSegmenterPlugin(Plugin):
+class PcaDirSegmenterGuiPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
         'main_window_plugin': 'bsmu.vision.plugins.windows.main.MainWindowPlugin',
-        'pc_segmenter_plugin': 'bsmu.biocell.plugins.pc_segmenter.PcSegmenterPlugin',
+        'pca_segmenter_plugin': 'bsmu.biocell.plugins.pca_segmenter.PcaSegmenterPlugin',
         'task_storage_plugin': 'bsmu.vision.plugins.storages.task.TaskStoragePlugin',
     }
 
     def __init__(
             self,
             main_window_plugin: MainWindowPlugin,
-            pc_segmenter_plugin: PcSegmenterPlugin,
+            pca_segmenter_plugin: PcaSegmenterPlugin,
             task_storage_plugin: TaskStoragePlugin,
     ):
         super().__init__()
@@ -56,31 +38,31 @@ class PcDirGuiSegmenterPlugin(Plugin):
         self._main_window_plugin = main_window_plugin
         self._main_window: MainWindow | None = None
 
-        self._pc_segmenter_plugin = pc_segmenter_plugin
+        self._pca_segmenter_plugin = pca_segmenter_plugin
         self._task_storage_plugin = task_storage_plugin
 
-        self._pc_dir_gui_segmenter: PcDirGuiSegmenter | None = None
+        self._pca_dir_segmenter_gui: PcaDirSegmenterGui | None = None
 
     @property
-    def pc_dir_gui_segmenter(self) -> PcDirGuiSegmenter | None:
-        return self._pc_dir_gui_segmenter
+    def pca_dir_segmenter_gui(self) -> PcaDirSegmenterGui | None:
+        return self._pca_dir_segmenter_gui
 
     def _enable_gui(self):
         self._main_window = self._main_window_plugin.main_window
 
         task_storage = self._task_storage_plugin.task_storage
         # TODO: read the DirSegmentationConfig from *.conf.yaml file
-        self._pc_dir_gui_segmenter = PcDirGuiSegmenter(
-            DirSegmentationConfig(), self._pc_segmenter_plugin.pc_segmenter, task_storage, self._main_window)
+        self._pca_dir_segmenter_gui = PcaDirSegmenterGui(
+            DirSegmentationConfig(), self._pca_segmenter_plugin.pca_segmenter, task_storage, self._main_window)
 
         self._main_window.add_menu_action(
             AlgorithmsMenu,
             self.tr('Segment Cancer in Directory...'),
-            self._pc_dir_gui_segmenter.segment_async_with_dialog,
+            self._pca_dir_segmenter_gui.segment_async_with_dialog,
         )
 
     def _disable(self):
-        self._pc_dir_gui_segmenter = None
+        self._pca_dir_segmenter_gui = None
 
         self._main_window = None
 
@@ -209,18 +191,18 @@ class DirSegmentationConfigDialog(QDialog):
         super().accept()
 
 
-class PcDirGuiSegmenter(QObject):
+class PcaDirSegmenterGui(QObject):
     def __init__(
             self,
             dir_segmentation_config: DirSegmentationConfig,
-            pc_segmenter: PcSegmenter,
+            pca_segmenter: PcaSegmenter,
             task_storage: TaskStorage = None,
             main_window: MainWindow = None,
     ):
         super().__init__()
 
         self._dir_segmentation_config = dir_segmentation_config
-        self._pc_segmenter = pc_segmenter
+        self._pca_segmenter = pca_segmenter
         self._task_storage = task_storage
         self._main_window = main_window
 
@@ -233,113 +215,5 @@ class PcDirGuiSegmenter(QObject):
         dir_segmentation_config_dialog.open()
 
     def segment_async(self):
-        pc_dir_segmenter = PcDirSegmenter(self._pc_segmenter, self._task_storage)
-        pc_dir_segmenter.segment_async(self._dir_segmentation_config)
-
-
-class PcDirSegmenter(QObject):
-    def __init__(self, pc_segmenter: PcSegmenter, task_storage: TaskStorage = None):
-        super().__init__()
-
-        self._pc_segmenter = pc_segmenter
-        self._task_storage = task_storage
-
-    def segment_async(self, config: DirSegmentationConfig) -> bool:
-        if (not config.image_dir.is_dir()) or (config.mask_dir.exists() and not config.mask_dir.is_dir()):
-            return False
-
-        wsi_file_reader = WholeSlideImageFileReader()
-        pc_dir_segmentation_task_name = (
-            self.tr(f'PC Dir {config.segmentation_mode.short_name_with_postfix} [{config.image_dir.name}]')
-        )
-        pc_dir_segmentation_task = PcDirSegmentationTask(
-            config, wsi_file_reader, self._pc_segmenter, pc_dir_segmentation_task_name)
-        if self._task_storage is not None:
-            self._task_storage.add_item(pc_dir_segmentation_task)
-        ThreadPool.run_async_task(pc_dir_segmentation_task)
-        return True
-
-
-class PcDirSegmentationTask(DnnTask):
-    def __init__(
-            self,
-            config: DirSegmentationConfig,
-            file_reader: ImageFileReader,
-            pc_segmenter: PcSegmenter,
-            name: str = '',
-    ):
-        super().__init__(name)
-
-        self._config = config
-        self._file_reader = file_reader
-        self._pc_segmenter = pc_segmenter
-
-        self._finished_subtask_count = 0
-        self._relative_image_paths: Sequence[Path] | None = None
-
-    def _run(self):
-        return self._segment_dir_files()
-
-    def _segment_dir_files(self):
-        self._prepare_relative_image_paths()
-
-        image_file_writer = CommonImageFileWriter()
-        for self._finished_subtask_count, relative_image_path in enumerate(self._relative_image_paths):
-            image_path = self._config.image_dir / relative_image_path
-            file_reading_and_segmentation_task = PcFileReadingAndSegmentationTask(
-                image_path, self._file_reader, self._pc_segmenter, self._config.segmentation_mode)
-            file_reading_and_segmentation_task.progress_changed.connect(
-                self._on_file_reading_and_segmentation_subtask_progress_changed)
-            file_reading_and_segmentation_task.run()
-            mask = file_reading_and_segmentation_task.result
-            mask_path = self._assemble_mask_path(relative_image_path)
-            image_file_writer.write_to_file(FlatImage(mask), mask_path, mkdir=True)
-
-    def _prepare_relative_image_paths(self):
-        pattern = '**/*' if self._config.include_subdirs else '*'
-        self._relative_image_paths = []
-        for image_path in self._config.image_dir.glob(pattern):
-            if not (image_path.is_file() and self._file_reader.can_read(image_path)):
-                continue
-
-            relative_image_path = image_path.relative_to(self._config.image_dir)
-            if not self._config.overwrite_existing_masks:
-                mask_path = self._assemble_mask_path(relative_image_path)
-                if mask_path.exists():
-                    continue
-
-            self._relative_image_paths.append(relative_image_path)
-
-    def _assemble_mask_path(self, relative_image_path: Path) -> Path:
-        return self._config.mask_dir / relative_image_path.with_suffix('.png')
-
-    def _on_file_reading_and_segmentation_subtask_progress_changed(self, progress: float):
-        self._change_subtask_based_progress(self._finished_subtask_count, len(self._relative_image_paths), progress)
-
-
-class PcFileReadingAndSegmentationTask(DnnTask):
-    def __init__(
-            self,
-            image_path: Path,
-            image_file_reader: ImageFileReader,
-            pc_segmenter: PcSegmenter,
-            segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
-            name: str = ''
-    ):
-        super().__init__(name)
-
-        self._image_path = image_path
-        self._image_file_reader = image_file_reader
-        self._pc_segmenter = pc_segmenter
-        self._segmentation_mode = segmentation_mode
-
-    def _run(self):
-        return self._read_and_segment()
-
-    def _read_and_segment(self):
-        image = self._image_file_reader.read_file(self._image_path)
-        pc_segmentation_task = self._pc_segmenter.create_segmentation_task(image, self._segmentation_mode)
-        pc_segmentation_task.progress_changed.connect(self.progress_changed)
-        pc_segmentation_task.run()
-        masks = pc_segmentation_task.result
-        return self._pc_segmenter.combine_class_masks(masks)
+        pca_dir_segmenter = PcaDirSegmenter(self._pca_segmenter, self._task_storage)
+        pca_dir_segmenter.segment_async(self._dir_segmentation_config)

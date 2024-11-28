@@ -13,7 +13,6 @@ from PySide6.QtCore import QObject
 
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.palette import Palette
-from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.task import DnnTask
 from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
 from bsmu.vision.dnn.segmenter import Segmenter as DnnSegmenter
@@ -21,8 +20,7 @@ from bsmu.vision.dnn.segmenter import Segmenter as DnnSegmenter
 if TYPE_CHECKING:
     from typing import Callable, Sequence
     from bsmu.vision.core.image import Image
-    from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
-    from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
+    from bsmu.vision.plugins.storages.task import TaskStorage
 
 
 class SegmentationMode(Enum):
@@ -58,114 +56,7 @@ _SEGMENTATION_MODE_TO_DISPLAY_SHORT_NAME = {
 }
 
 
-class PcSegmenterPlugin(Plugin):
-    _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
-        'palette_pack_settings_plugin': 'bsmu.vision.plugins.palette.settings.PalettePackSettingsPlugin',
-        'task_storage_plugin': 'bsmu.vision.plugins.storages.task.TaskStoragePlugin',
-    }
-
-    _DNN_MODELS_DIR_NAME = 'dnn-models'
-    _DATA_DIRS = (_DNN_MODELS_DIR_NAME,)
-
-    def __init__(
-            self,
-            palette_pack_settings_plugin: PalettePackSettingsPlugin,
-            task_storage_plugin: TaskStoragePlugin,
-    ):
-        super().__init__()
-
-        self._palette_pack_settings_plugin = palette_pack_settings_plugin
-        self._task_storage_plugin = task_storage_plugin
-
-        self._pc_gleason_3_segmenter: PcGleasonSegmenter | None = None
-        self._pc_gleason_4_segmenter: PcGleasonSegmenter | None = None
-
-        self._pc_segmenter: PcSegmenter | None = None
-
-    @property
-    def pc_gleason_3_segmenter(self) -> PcGleasonSegmenter | None:
-        return self._pc_gleason_3_segmenter
-
-    @property
-    def pc_gleason_4_segmenter(self) -> PcGleasonSegmenter | None:
-        return self._pc_gleason_4_segmenter
-
-    @property
-    def pc_segmenter(self) -> PcSegmenter | None:
-        return self._pc_segmenter
-
-    def _enable(self):
-        gleason_3_model_params = DnnModelParams.from_config(
-            self.config_value('gleason_3_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
-        gleason_4_model_params = DnnModelParams.from_config(
-            self.config_value('gleason_4_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
-
-        main_palette = self._palette_pack_settings_plugin.settings.main_palette
-        task_storage = self._task_storage_plugin.task_storage
-        self._pc_gleason_3_segmenter = PcGleasonSegmenter(
-            gleason_3_model_params, main_palette, 'gleason_3', task_storage)
-        self._pc_gleason_4_segmenter = PcGleasonSegmenter(
-            gleason_4_model_params, main_palette, 'gleason_4', task_storage)
-        self._pc_segmenter = PcSegmenter(
-            [self._pc_gleason_3_segmenter, self._pc_gleason_4_segmenter],
-            task_storage,
-        )
-
-    def _disable(self):
-        self._pc_segmenter = None
-        self._pc_gleason_3_segmenter = None
-        self._pc_gleason_4_segmenter = None
-
-
-class PcSegmenter(QObject):
-    def __init__(self, class_segmenters: Sequence[PcGleasonSegmenter], task_storage: TaskStorage = None):
-        super().__init__()
-
-        self._class_segmenters = class_segmenters
-        self._task_storage = task_storage
-
-    def segment_async(
-            self,
-            image: Image,
-            segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
-            on_finished: Callable[[Sequence[np.ndarray]], None] | None = None,
-    ):
-        pc_segmentation_task = self.create_segmentation_task(image, segmentation_mode)
-        pc_segmentation_task.on_finished = on_finished
-
-        if self._task_storage is not None:
-            self._task_storage.add_item(pc_segmentation_task)
-        ThreadPool.run_async_task(pc_segmentation_task)
-
-    def create_segmentation_task(
-            self,
-            image: Image,
-            segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY
-    ) -> MulticlassMultipassTiledSegmentationTask:
-
-        segmentation_profiles = []
-        for class_segmenter in self._class_segmenters:
-            segmentation_profiles.append(
-                MultipassTiledSegmentationProfile(
-                    class_segmenter.segmenter,
-                    segmentation_mode,
-                    class_segmenter.mask_background_class,
-                    class_segmenter.mask_foreground_class,
-                )
-            )
-        pc_segmentation_task_name = f'PC {segmentation_mode.short_name_with_postfix} [{image.path_name}]'
-        return MulticlassMultipassTiledSegmentationTask(image.pixels, segmentation_profiles, pc_segmentation_task_name)
-
-    def combine_class_masks(self, class_masks: Sequence[np.ndarray]) -> np.ndarray:
-        combined_mask = class_masks[0].copy()
-        # Skip first elements, because the `combined_mask` already contains the first mask
-        for class_mask, class_segmenter in zip(class_masks[1:], self._class_segmenters[1:]):
-            is_foreground_class = class_mask == class_segmenter.mask_foreground_class
-            combined_mask[is_foreground_class] = class_segmenter.mask_foreground_class
-        return combined_mask
-
-
-class PcGleasonSegmenter(QObject):
+class MultipassTiledSegmenter(QObject):
     def __init__(
             self,
             model_params: DnnModelParams,
@@ -208,21 +99,17 @@ class PcGleasonSegmenter(QObject):
     ):
         segmentation_profile = MultipassTiledSegmentationProfile(
             self._segmenter, segmentation_mode, self._mask_background_class, self._mask_foreground_class)
-        pc_gleason_segmentation_task_name = (
-            f'PC {self._model_params.output_object_short_name} '
+        segmentation_task_name = (
+            f'{self._model_params.output_object_short_name} '
             f'{segmentation_mode.short_name_with_postfix} '
             f'[{image.path_name}]'
         )
-        pc_gleason_segmentation_task = MultipassTiledSegmentationTask(
-            image.pixels,
-            segmentation_profile,
-            pc_gleason_segmentation_task_name,
-        )
-        pc_gleason_segmentation_task.on_finished = on_finished
+        segmentation_task = MultipassTiledSegmentationTask(image.pixels, segmentation_profile, segmentation_task_name)
+        segmentation_task.on_finished = on_finished
 
         if self._task_storage is not None:
-            self._task_storage.add_item(pc_gleason_segmentation_task)
-        ThreadPool.run_async_task(pc_gleason_segmentation_task)
+            self._task_storage.add_item(segmentation_task)
+        ThreadPool.run_async_task(segmentation_task)
 
 
 class TiledSegmentationTask(DnnTask):

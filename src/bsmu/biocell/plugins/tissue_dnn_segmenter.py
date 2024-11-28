@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
 
 
-class DnnTissueSegmenterPlugin(Plugin):
+class TissueDnnSegmenterPlugin(Plugin):
     _DEFAULT_DEPENDENCY_PLUGIN_FULL_NAME_BY_KEY = {
         'palette_pack_settings_plugin': 'bsmu.vision.plugins.palette.settings.PalettePackSettingsPlugin',
         'task_storage_plugin': 'bsmu.vision.plugins.storages.task.TaskStoragePlugin',
@@ -36,11 +36,11 @@ class DnnTissueSegmenterPlugin(Plugin):
         self._palette_pack_settings_plugin = palette_pack_settings_plugin
         self._task_storage_plugin = task_storage_plugin
 
-        self._dnn_tissue_segmenter: DnnTissueSegmenter | None = None
+        self._tissue_segmenter: TissueSegmenter | None = None
 
     @property
-    def dnn_tissue_segmenter(self) -> DnnTissueSegmenter | None:
-        return self._dnn_tissue_segmenter
+    def tissue_segmenter(self) -> TissueSegmenter | None:
+        return self._tissue_segmenter
 
     def _enable(self):
         tissue_model_params = DnnModelParams.from_config(
@@ -48,14 +48,14 @@ class DnnTissueSegmenterPlugin(Plugin):
 
         main_palette = self._palette_pack_settings_plugin.settings.main_palette
         task_storage = self._task_storage_plugin.task_storage
-        self._dnn_tissue_segmenter = DnnTissueSegmenter(
-            tissue_model_params, main_palette, 'tissue', task_storage)
+        self._tissue_segmenter = TissueSegmenter(
+            tissue_model_params, main_palette, task_storage=task_storage)
 
     def _disable(self):
-        self._dnn_tissue_segmenter = None
+        self._tissue_segmenter = None
 
 
-class DnnTissueSegmenter(QObject):
+class TissueSegmenter(QObject):
     def __init__(
             self,
             model_params: DnnModelParams,
