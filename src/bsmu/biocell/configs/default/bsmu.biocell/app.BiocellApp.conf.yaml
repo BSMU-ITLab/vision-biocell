@@ -24,7 +24,7 @@ plugins:
 
   - bsmu.biocell.plugins.gui.pca_segmenter.PcaSegmenterGuiPlugin
   - bsmu.biocell.plugins.gui.pca_dir_segmenter.PcaDirSegmenterGuiPlugin
-#  - bsmu.biocell.plugins.gui.tissue_dnn_segmenter.TissueDnnSegmenterGuiPlugin
+  - bsmu.biocell.plugins.gui.tissue_dnn_segmenter.TissueDnnSegmenterGuiPlugin
 #  - bsmu.biocell.plugins.gui.tissue_threshold_segmenter.TissueThresholdSegmenterGuiPlugin
 #  - bsmu.biocell.plugins.kidney_tissue_segmenter.KidneyTissueSegmenterPlugin
 

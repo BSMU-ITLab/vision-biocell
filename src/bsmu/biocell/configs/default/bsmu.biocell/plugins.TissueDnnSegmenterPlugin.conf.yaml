@@ -1,11 +1,12 @@
 tissue_segmenter_model:
-  name: 'tissue-segmenter.onnx'
+  name: '2024.10.17-v7-segformer-tu-resnetv2_50x1_bit.goog_distilled_in1k-panda+empty(512, 512)[(255,)].onnx'
   output_object_name: 'Tissue'
   output_object_short_name: 'T'
   preload: false
-  input_size: [3, 1536, 1536]  # Size can vary but must be a multiple of 512
+  batch_size: 10
+  input_size: [3, 512, 512]
   channels_axis: 0
   channels_order: 'rgb'
   normalize: false
   preprocessing_mode: ''
-  mask_binarization_threshold: 0.5
+  mask_binarization_threshold: 0.619

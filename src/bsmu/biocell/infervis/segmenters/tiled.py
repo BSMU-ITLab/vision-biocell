@@ -20,18 +20,18 @@ if TYPE_CHECKING:
 
 
 class MultipassTiledMdiSegmenter(MdiSegmenter):
-    def __init__(self, pc_gleason_segmenter: MultipassTiledSegmenter, mdi: Mdi):
+    def __init__(self, segmenter: MultipassTiledSegmenter, mdi: Mdi):
         super().__init__(mdi)
 
-        self._pc_gleason_segmenter = pc_gleason_segmenter
+        self._segmenter = segmenter
 
     @property
     def mask_foreground_class(self) -> int:
-        return self._pc_gleason_segmenter.mask_foreground_class
+        return self._segmenter.mask_foreground_class
 
     @property
     def mask_background_class(self) -> int:
-        return self._pc_gleason_segmenter.mask_background_class
+        return self._segmenter.mask_background_class
 
     def segment_async(
             self,
@@ -39,21 +39,20 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
     ):
-        layered_image = self._active_layered_image()
-        if layered_image is None:
+        layered_image, image = self._check_duplicate_mask_and_get_active_layered_image(
+            mask_layer_name, mask_draw_mode=mask_draw_mode)
+        if image is None:
             return
 
-        image_layer = layered_image.layers[0]
-        image = image_layer.image
         on_finished = partial(
-            self._on_pc_gleason_segmentation_finished,
+            self._on_segmentation_finished,
             layered_image=layered_image,
             mask_layer_name=mask_layer_name,
             mask_draw_mode=mask_draw_mode,
         )
-        self._pc_gleason_segmenter.segment_async(image, segmentation_mode, on_finished)
+        self._segmenter.segment_async(image, segmentation_mode, on_finished)
 
-    def _on_pc_gleason_segmentation_finished(
+    def _on_segmentation_finished(
             self,
             mask: np.ndarray,
             layered_image: LayeredImage,
@@ -90,7 +89,7 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
                 mask_layer_name,
                 mask,
                 FlatImage,
-                self._pc_gleason_segmenter.mask_palette,
+                self._segmenter.mask_palette,
                 visibility=Visibility(True, 0.75),
             )
         elif mask_draw_mode == MaskDrawMode.OVERLAY_FOREGROUND:
@@ -108,7 +107,7 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
     def on_data_visualized(self, data: Data, data_viewer_sub_windows: list[DataViewerSubWindow]):
         raise NotImplementedError()
 
-        mask_layer_name = self._pc_gleason_segmenter.segmenter.model_params.output_object_name
+        mask_layer_name = self._segmenter.segmenter.model_params.output_object_name
         if not isinstance(data, LayeredImage) or (len(data.layers) > 1 and data.layers[1].name == mask_layer_name):
             return
 

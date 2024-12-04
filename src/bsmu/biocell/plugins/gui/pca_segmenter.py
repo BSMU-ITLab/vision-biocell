@@ -171,12 +171,10 @@ class PcaMdiSegmenter(MdiSegmenter):
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
     ):
-        layered_image = self._active_layered_image()
-        if layered_image is None:
+        layered_image, image = self._check_duplicate_mask_and_get_active_layered_image(mask_layer_name)
+        if image is None:
             return
 
-        image_layer = layered_image.layers[0]
-        image = image_layer.image
         on_finished = partial(
             self._on_pca_segmentation_finished,
             layered_image=layered_image,
