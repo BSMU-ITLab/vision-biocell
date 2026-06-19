@@ -7,9 +7,8 @@ import numpy as np
 import skimage.color
 from PySide6.QtCore import Qt
 
-from bsmu.vision.plugins.tools.viewer.image.wsi_smart_brush import (
-    WsiSmartBrushImageViewerTool, WsiSmartBrushImageViewerToolPlugin, WsiSmartBrushImageViewerToolSettings,
-    WsiSmartBrushImageViewerToolSettingsWidget,
+from bsmu.vision.plugins.tools.wsi_smart_brush import (
+    WsiSmartBrushTool, WsiSmartBrushToolPlugin, WsiSmartBrushToolSettings, WsiSmartBrushToolSettingsWidget,
 )
 
 if TYPE_CHECKING:
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
 
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
-    from bsmu.vision.plugins.tools.viewer import ViewerTool, ViewerToolSettings, ViewerToolSettingsWidget
+    from bsmu.vision.plugins.tools import ViewerTool, ViewerToolSettings, ViewerToolSettingsWidget
     from bsmu.vision.plugins.undo import UndoPlugin, UndoManager
     from bsmu.vision.plugins.windows.main import MainWindowPlugin
     from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewer
@@ -34,20 +33,20 @@ def show_rgb(rgb: np.ndarray, title: str = ''):
     cv.imshow(title, cv.cvtColor(rgb, cv.COLOR_RGB2BGR))
 
 
-class HedSmartBrushImageViewerToolSettings(WsiSmartBrushImageViewerToolSettings):
+class HedSmartBrushToolSettings(WsiSmartBrushToolSettings):
     pass
 
 
-class HedSmartBrushImageViewerToolSettingsWidget(WsiSmartBrushImageViewerToolSettingsWidget):
+class HedSmartBrushToolSettingsWidget(WsiSmartBrushToolSettingsWidget):
     pass
 
 
-class HedSmartBrushImageViewerTool(WsiSmartBrushImageViewerTool):
+class HedSmartBrushTool(WsiSmartBrushTool):
     def __init__(
             self,
             viewer: LayeredImageViewer,
             undo_manager: UndoManager,
-            settings: HedSmartBrushImageViewerToolSettings,
+            settings: HedSmartBrushToolSettings,
     ):
         super().__init__(viewer, undo_manager, settings)
 
@@ -99,16 +98,16 @@ class HedSmartBrushImageViewerTool(WsiSmartBrushImageViewerTool):
         return image
 
 
-class HedSmartBrushImageViewerToolPlugin(WsiSmartBrushImageViewerToolPlugin):
+class HedSmartBrushToolPlugin(WsiSmartBrushToolPlugin):
     def __init__(
             self,
             main_window_plugin: MainWindowPlugin,
             mdi_plugin: MdiPlugin,
             undo_plugin: UndoPlugin,
             palette_pack_settings_plugin: PalettePackSettingsPlugin,
-            tool_cls: Type[ViewerTool] = HedSmartBrushImageViewerTool,
-            tool_settings_cls: Type[ViewerToolSettings] = HedSmartBrushImageViewerToolSettings,
-            tool_settings_widget_cls: Type[ViewerToolSettingsWidget] = HedSmartBrushImageViewerToolSettingsWidget,
+            tool_cls: Type[ViewerTool] = HedSmartBrushTool,
+            tool_settings_cls: Type[ViewerToolSettings] = HedSmartBrushToolSettings,
+            tool_settings_widget_cls: Type[ViewerToolSettingsWidget] = HedSmartBrushToolSettingsWidget,
             action_name: str = 'Smart Brush (HED)',
             action_shortcut: Qt.Key = Qt.Key_2,
     ):

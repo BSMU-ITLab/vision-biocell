@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject
 
-from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.layered import LayeredDataViewerHolder
 
 if TYPE_CHECKING:
-    from bsmu.vision.core.image.layered import LayeredImage
+    from bsmu.vision.core.data.layered import LayeredData
     from bsmu.vision.plugins.doc_interfaces.mdi import Mdi
-    from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewer
+    from bsmu.vision.widgets.viewers.layered import LayeredDataViewer
 
 
 class MdiInferencer(QObject):
@@ -18,11 +18,12 @@ class MdiInferencer(QObject):
 
         self._mdi = mdi
 
-    def _active_layered_image(self) -> LayeredImage | None:
-        viewer = self._active_layered_image_viewer()
+    def _active_layered_data(self) -> LayeredData | None:
+        viewer = self._active_layered_data_viewer()
         if viewer is not None:
             return viewer.data
+        return None
 
-    def _active_layered_image_viewer(self) -> LayeredImageViewer | None:
-        layered_image_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredImageViewerHolder)
-        return layered_image_viewer_sub_window and layered_image_viewer_sub_window.layered_image_viewer
+    def _active_layered_data_viewer(self) -> LayeredDataViewer | None:
+        layered_data_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredDataViewerHolder)
+        return layered_data_viewer_sub_window and layered_data_viewer_sub_window.layered_data_viewer

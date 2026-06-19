@@ -12,14 +12,15 @@ from PySide6.QtWidgets import (
 from bsmu.biocell.plugins.tissue_threshold_segmenter import (
     TissueSegmentationConfig, TissueSegmenter, GradientCornerValues)
 from bsmu.vision.core.image import FlatImage
+from bsmu.vision.core.layers import RasterLayer
 from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.visibility import Visibility
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu, FileMenu
 from bsmu.vision.plugins.writers.image.common import CommonImageFileWriter
-from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.layered import LayeredDataViewerHolder
 
 if TYPE_CHECKING:
-    from bsmu.vision.core.image.layered import LayeredImage
+    from bsmu.vision.core.data.layered import LayeredData
     from bsmu.vision.core.palette import Palette
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin, Mdi
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
@@ -251,16 +252,19 @@ class TissueSegmenterGui(QObject):
         config_dialog.activateWindow()
 
     def segment(self):
-        layered_image = self._active_layered_image()
-        if layered_image is None:
+        layered_data = self._active_layered_data()
+        if layered_data is None:
             return
 
-        image_layer = layered_image.layers[0]
-        image = image_layer.image
-        tissue_segmenter = TissueSegmenter()
-        mask = tissue_segmenter.segment(image.pixels, self._tissue_segmentation_config)
+        raster_layer = layered_data.layers[0]
+        if not isinstance(raster_layer, RasterLayer):
+            return
 
-        layered_image.add_layer_or_modify_pixels(
+        raster = raster_layer.data
+        tissue_segmenter = TissueSegmenter()
+        mask = tissue_segmenter.segment(raster.pixels, self._tissue_segmentation_config)
+
+        layered_data.add_layer_or_modify_pixels(
             self._mask_layer_name,
             mask,
             FlatImage,
@@ -269,14 +273,14 @@ class TissueSegmenterGui(QObject):
         )
 
     def save_tissue_mask_and_config_as(self):
-        layered_image = self._active_layered_image()
-        if layered_image is None:
+        layered_data = self._active_layered_data()
+        if layered_data is None:
             return
 
         save_path_str, selected_filter = QFileDialog.getSaveFileName(
             parent=self._main_window,
             caption=self.tr('Save Tissue Mask and Config'),
-            dir=str(layered_image.layers[0].image_path.with_suffix('.png')),
+            dir=str(layered_data.layers[0].data_path.with_suffix('.png')),
             filter='PNG (*.png)',
         )
         if not save_path_str:
@@ -285,7 +289,7 @@ class TissueSegmenterGui(QObject):
         save_path = Path(save_path_str)
         try:
             CommonImageFileWriter().write_to_file(
-                layered_image.layer_by_name(self._mask_layer_name).image, save_path)
+                layered_data.layer_by_name(self._mask_layer_name).data, save_path)
             self._tissue_segmentation_config.save_to_yaml(save_path.with_suffix('.conf.yaml'))
         except Exception as e:
             QMessageBox.warning(
@@ -307,6 +311,6 @@ class TissueSegmenterGui(QObject):
     def _on_tissue_segmentation_config_dialog_destroyed(self):
         self._tissue_segmentation_config_dialog = None
 
-    def _active_layered_image(self) -> LayeredImage | None:
-        layered_image_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredImageViewerHolder)
-        return layered_image_viewer_sub_window and layered_image_viewer_sub_window.layered_image_viewer.data
+    def _active_layered_data(self) -> LayeredData | None:
+        layered_data_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredDataViewerHolder)
+        return layered_data_viewer_sub_window and layered_data_viewer_sub_window.layered_data_viewer.data

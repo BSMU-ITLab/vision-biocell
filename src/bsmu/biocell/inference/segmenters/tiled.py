@@ -19,7 +19,7 @@ from bsmu.vision.dnn.segmenter import Segmenter as DnnSegmenter
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
-    from bsmu.vision.core.image import Image
+    from bsmu.vision.core.data.raster import Raster
     from bsmu.vision.plugins.storages.task import TaskStorage
 
 
@@ -93,7 +93,7 @@ class MultipassTiledSegmenter(QObject):
 
     def segment_async(
             self,
-            image: Image,
+            raster: Raster,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             on_finished: Callable[[np.ndarray], None] | None = None,
     ):
@@ -102,9 +102,9 @@ class MultipassTiledSegmenter(QObject):
         segmentation_task_name = (
             f'{self._model_params.output_object_short_name} '
             f'{segmentation_mode.short_name_with_postfix} '
-            f'[{image.path_name}]'
+            f'[{raster.path_name}]'
         )
-        segmentation_task = MultipassTiledSegmentationTask(image.pixels, segmentation_profile, segmentation_task_name)
+        segmentation_task = MultipassTiledSegmentationTask(raster.pixels, segmentation_profile, segmentation_task_name)
         segmentation_task.on_finished = on_finished
 
         if self._task_storage is not None:

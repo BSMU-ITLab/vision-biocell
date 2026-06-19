@@ -1,4 +1,4 @@
-git+https://github.com/BSMU-ITLab/vision.git@v0.27.1
+git+https://github.com/BSMU-ITLab/vision.git@v0.45.2
 coloredlogs==15.0.1
 cx_Freeze==7.2.5
 cx_Logging==3.2.1

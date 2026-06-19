@@ -13,8 +13,10 @@ from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
+
     import numpy as np
-    from bsmu.vision.core.image import Image
+
+    from bsmu.vision.core.data.raster import Raster
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
     from bsmu.vision.plugins.storages.task import TaskStorage, TaskStoragePlugin
 
@@ -87,11 +89,11 @@ class PcaSegmenter(QObject):
 
     def segment_async(
             self,
-            image: Image,
+            raster: Raster,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             on_finished: Callable[[Sequence[np.ndarray]], None] | None = None,
     ):
-        pca_segmentation_task = self.create_segmentation_task(image, segmentation_mode)
+        pca_segmentation_task = self.create_segmentation_task(raster, segmentation_mode)
         pca_segmentation_task.on_finished = on_finished
 
         if self._task_storage is not None:
@@ -100,7 +102,7 @@ class PcaSegmenter(QObject):
 
     def create_segmentation_task(
             self,
-            image: Image,
+            raster: Raster,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY
     ) -> MulticlassMultipassTiledSegmentationTask:
 
@@ -114,8 +116,8 @@ class PcaSegmenter(QObject):
                     class_segmenter.mask_foreground_class,
                 )
             )
-        pca_segmentation_task_name = f'PCa {segmentation_mode.short_name_with_postfix} [{image.path_name}]'
-        return MulticlassMultipassTiledSegmentationTask(image.pixels, segmentation_profiles, pca_segmentation_task_name)
+        pca_segmentation_task_name = f'PCa {segmentation_mode.short_name_with_postfix} [{raster.path_name}]'
+        return MulticlassMultipassTiledSegmentationTask(raster.pixels, segmentation_profiles, pca_segmentation_task_name)
 
     def combine_class_masks(self, class_masks: Sequence[np.ndarray]) -> np.ndarray:
         combined_mask = class_masks[0].copy()

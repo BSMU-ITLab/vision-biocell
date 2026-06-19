@@ -18,9 +18,10 @@ plugins:
 
   - bsmu.vision.plugins.writers.image.common.CommonImageFileWriterPlugin
 
-  - bsmu.vision.plugins.tools.viewer.manager.ViewerToolManagerPlugin
-  - bsmu.vision.plugins.tools.viewer.image.hand_tool.HandImageViewerToolPlugin
-  - bsmu.biocell.plugins.tools.hed_wsi_smart_brush.HedSmartBrushImageViewerToolPlugin
+  - bsmu.vision.plugins.tools.manager.ViewerToolManagerPlugin
+  - bsmu.vision.plugins.tools.hand.HandToolPlugin
+  - bsmu.biocell.plugins.tools.hed_wsi_smart_brush.HedSmartBrushToolPlugin
+  - bsmu.vision.plugins.tools.pointer.PointerToolPlugin
 
   - bsmu.biocell.plugins.gui.pca_segmenter.PcaSegmenterGuiPlugin
   - bsmu.biocell.plugins.gui.pca_dir_segmenter.PcaDirSegmenterGuiPlugin
@@ -29,6 +30,7 @@ plugins:
 #  - bsmu.biocell.plugins.kidney_tissue_segmenter.KidneyTissueSegmenterPlugin
 
 #  - bsmu.vision.plugins.walkers.file.MdiImageLayerFileWalkerPlugin
+#  - bsmu.vision.plugins.walkers.mask_auto_save.MaskAutoSaveOnWalkPlugin
 
   - bsmu.vision.plugins.layer_controller.MdiImageViewerLayerControllerPlugin
   - bsmu.vision.plugins.layers_view.LayersTableViewPlugin

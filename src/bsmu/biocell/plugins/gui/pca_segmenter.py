@@ -8,8 +8,8 @@ import numpy as np
 from bsmu.biocell.inference.segmenters.tiled import SegmentationMode
 from bsmu.biocell.infervis.segmenters.mdi import MaskDrawMode, MdiSegmenter
 from bsmu.biocell.infervis.segmenters.tiled import MultipassTiledMdiSegmenter
+from bsmu.vision.core.data.layered import LayeredData
 from bsmu.vision.core.image import FlatImage
-from bsmu.vision.core.image.layered import LayeredImage
 from bsmu.vision.core.palette import Palette
 from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.core.visibility import Visibility
@@ -171,29 +171,29 @@ class PcaMdiSegmenter(MdiSegmenter):
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
     ):
-        layered_image, image = self._check_duplicate_mask_and_get_active_layered_image(mask_layer_name)
-        if image is None:
+        layered_data, raster = self._check_duplicate_mask_and_get_active_layered_data(mask_layer_name)
+        if raster is None:
             return
 
         on_finished = partial(
             self._on_pca_segmentation_finished,
-            layered_image=layered_image,
+            layered_data=layered_data,
             mask_layer_name=mask_layer_name,
             mask_draw_mode=mask_draw_mode,
         )
-        self._pca_segmenter.segment_async(image, segmentation_mode, on_finished)
+        self._pca_segmenter.segment_async(raster, segmentation_mode, on_finished)
 
     def _on_pca_segmentation_finished(
             self,
             masks: Sequence[np.ndarray],
-            layered_image: LayeredImage,
+            layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
     ):
         # Apply the passed `mask_draw_mode` only to draw the first mask
         first = 0
         modifiable_mask = self._class_mdi_segmenters[first].update_mask_layer(
-            masks[first], layered_image, mask_layer_name, mask_draw_mode)
+            masks[first], layered_data, mask_layer_name, mask_draw_mode)
 
         # Apply other draw modes for subsequent masks to preserve already drawn masks
         if mask_draw_mode == MaskDrawMode.REDRAW_ALL or mask_draw_mode == MaskDrawMode.OVERLAY_FOREGROUND:
@@ -204,24 +204,24 @@ class PcaMdiSegmenter(MdiSegmenter):
             raise ValueError(f'Invalid MaskDrawMode: {mask_draw_mode}')
 
         for class_mdi_segmenter, mask in zip(self._class_mdi_segmenters[1:], masks[1:]):
-            update_mask_layer(class_mdi_segmenter, mask, layered_image, mask_layer_name)
+            update_mask_layer(class_mdi_segmenter, mask, layered_data, mask_layer_name)
 
     @staticmethod
     def _update_mask_layer(
             class_segmenter_gui: MultipassTiledMdiSegmenter,
             mask: np.ndarray,
-            layered_image: LayeredImage,
+            layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode,
     ):
-        class_segmenter_gui.update_mask_layer(mask, layered_image, mask_layer_name, mask_draw_mode)
+        class_segmenter_gui.update_mask_layer(mask, layered_data, mask_layer_name, mask_draw_mode)
 
     @staticmethod
     def _update_mask_layer_partially(
             class_segmenter_gui: MultipassTiledMdiSegmenter,
             mask: np.ndarray,
-            layered_image: LayeredImage,
+            layered_data: LayeredData,
             mask_layer_name: str,
             modifiable_mask: np.ndarray,
     ):
-        class_segmenter_gui.update_mask_layer_partially(mask, layered_image, mask_layer_name, modifiable_mask)
+        class_segmenter_gui.update_mask_layer_partially(mask, layered_data, mask_layer_name, modifiable_mask)
