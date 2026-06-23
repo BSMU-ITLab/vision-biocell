@@ -22,6 +22,7 @@ plugins:
   - bsmu.vision.plugins.tools.hand.HandToolPlugin
   - bsmu.biocell.plugins.tools.hed_wsi_smart_brush.HedSmartBrushToolPlugin
   - bsmu.vision.plugins.tools.pointer.PointerToolPlugin
+  - bsmu.biocell.plugins.tools.cancer_segment.CancerSegmentToolPlugin
 
   - bsmu.biocell.plugins.gui.pca_segmenter.PcaSegmenterGuiPlugin
   - bsmu.biocell.plugins.gui.pca_dir_segmenter.PcaDirSegmenterGuiPlugin
@@ -36,3 +37,5 @@ plugins:
   - bsmu.vision.plugins.layers_view.LayersTableViewPlugin
 
   - bsmu.vision.plugins.task_storage_view.TaskStorageViewPlugin
+
+  - bsmu.biocell.plugins.gui.palette_view.PaletteViewPlugin
