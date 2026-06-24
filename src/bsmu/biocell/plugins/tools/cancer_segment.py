@@ -1,22 +1,20 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, Signal, QObject, QPointF
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtWidgets import (
     QVBoxLayout, QRadioButton, QGroupBox, QHBoxLayout, QLayout)
 
+from bsmu.biocell.actors.shape.cancer_span import CancerSpanActor
+from bsmu.biocell.core.data.vector.shapes.cancer_span import CancerSpan
+from bsmu.biocell.core.domain.gleason import GleasonGrade
 from bsmu.vision.actors.shape import PolylineActor
-from bsmu.vision.actors.shape.constrained import SnappedSpanActor, SnappedNodeActor
-from bsmu.vision.actors.shape.shape import AntialiasedGraphicsPathItem  ## temp
+from bsmu.vision.actors.shape.constrained import SnappedSpanActor
 from bsmu.vision.core.data.vector.shapes import NodeBasedShape
-from bsmu.vision.core.data.vector.shapes import Polyline
-from bsmu.vision.core.data.vector.shapes.constrained import SnappedSpan
 from bsmu.vision.plugins.tools import (
     ViewerToolSettingsWidget, ViewerTool, ViewerToolSettings, ViewerToolPlugin, CursorConfig)
 from bsmu.vision.plugins.tools.layered import LayeredDataViewerTool, LayeredDataViewerToolSettings
@@ -33,116 +31,12 @@ if TYPE_CHECKING:
     from bsmu.vision.widgets.viewers.layered import LayeredDataViewer
 
 
-@dataclass(frozen=True)
-class PolylineAttachedPointInfo:          ## TEMP
-    """A point attached to a specific segment of a polyline."""
-    point: QPointF
-    polyline: Polyline
-    segment_index: int  # Index of the polyline segment this point belongs to
-
-
 class AnnotationMode(Enum):
     TISSUE = 1
     CANCER = 2
 
 
 from bsmu.vision.actors.shape.registry import register_shape_actor
-
-
-class GleasonGrade(Enum):
-    G3 = 3
-    G4 = 4
-    G5 = 5
-
-
-class CancerSpan(SnappedSpan):
-    def __init__(
-            self,
-            gleason_grade: GleasonGrade,
-            origin: QPointF | None = None,
-            parent_shape: NodeBasedShape | None = None,
-            inherit_transform: bool = False,
-            parent: QObject | None = None,
-    ):
-        super().__init__(origin=origin, parent_shape=parent_shape, inherit_transform=inherit_transform, parent=parent)
-
-        self._gleason_grade = gleason_grade
-
-    @property
-    def gleason_grade(self) -> GleasonGrade:
-        return self._gleason_grade
-
-
-class CancerSpanActor(SnappedSpanActor[CancerSpan, AntialiasedGraphicsPathItem]):
-    DARK_FACTOR = 110
-    _GRADE_STYLE_MAP = {
-        GleasonGrade.G3: {
-            # "pen": QPen(QColor(Qt.GlobalColor.yellow).darker(DARK_FACTOR), 11, s=Qt.PenStyle.SolidLine, c=Qt.PenCapStyle.RoundCap),
-            "pen_width": 13,#11,
-            "node_radius": 7.5,
-            # "completed_color": QColor(Qt.GlobalColor.yellow).darker(DARK_FACTOR),
-            "completed_color": QColor('#e5e50b'),
-            "selected_color": QColor(Qt.GlobalColor.yellow),
-            'z_value': 3,
-        },
-        GleasonGrade.G4: {
-            # "pen": QPen(QColor(255, 165, 0).darker(DARK_FACTOR), 7, s=Qt.PenStyle.SolidLine, c=Qt.PenCapStyle.RoundCap),
-            "pen_width": 8,#7,
-            "node_radius": 6.5,
-            # "completed_color": QColor(255, 165, 0).darker(DARK_FACTOR),
-            "completed_color": QColor('#e5790c'),
-            "selected_color": QColor(255, 165, 0),
-            'z_value': 4,
-        },
-        GleasonGrade.G5: {
-            # "pen": QPen(QColor(Qt.GlobalColor.red).darker(DARK_FACTOR), 3, s=Qt.PenStyle.SolidLine, c=Qt.PenCapStyle.RoundCap),
-            "pen_width": 3,
-            "node_radius": 4.0,
-            # "completed_color": QColor(Qt.GlobalColor.red).darker(DARK_FACTOR),
-            "completed_color": QColor('#e60c0c'),
-            "selected_color": QColor(Qt.GlobalColor.red),
-            'z_value': 5,
-        },
-    }
-
-    def __init__(
-        self,
-        model: CancerSpan | None = None,
-        node_actor_class: type[SnappedNodeActor] = SnappedNodeActor,
-        parent: QObject | None = None,
-    ):
-        super().__init__(model, node_actor_class=node_actor_class, parent=parent)
-
-    def _model_changed(self) -> None:
-        super()._model_changed()
-
-        self._apply_gleason_style()
-
-    def _apply_gleason_style(self) -> None:
-        if not isinstance(self.model, CancerSpan):
-            return
-
-        grade = self.model.gleason_grade
-        style = self._GRADE_STYLE_MAP.get(grade)
-        if not style:
-            return
-
-        self._draft_color = style["completed_color"]
-        self._completed_color = style["completed_color"]
-        self._subselected_color = style["completed_color"]
-        self._selected_color = style["selected_color"]
-        self._pen_screen_width = style["pen_width"]
-        self._node_radius = style["node_radius"]
-
-        pen = self.graphics_item.pen()
-        pen.setStyle(Qt.PenStyle.SolidLine)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-
-        self.graphics_item.setPen(pen)
-
-        self.graphics_item.setZValue(style['z_value'])
-
-
 register_shape_actor(CancerSpan, CancerSpanActor)
 
 
