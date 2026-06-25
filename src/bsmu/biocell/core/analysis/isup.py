@@ -7,7 +7,7 @@ import numpy as np
 
 from bsmu.biocell.core.converters.gleason_to_pixel import GLEASON_TO_PIXEL_CLASS
 from bsmu.biocell.core.data.vector.shapes.cancer_span import CancerSpan
-from bsmu.biocell.core.domain import GleasonGrade, PixelClass
+from bsmu.biocell.core.domain import GleasonGrade, GleasonScore, PixelClass
 
 if TYPE_CHECKING:
     from typing import Sequence
@@ -161,3 +161,41 @@ def _calculate_area(mask: Raster) -> dict[GleasonGrade, float]:
         grade: (np.sum(pixels == GLEASON_TO_PIXEL_CLASS[grade]) / tissue_area) * 100.0
         for grade in GleasonGrade
     }
+
+
+def calculate_gleason_score(grade_to_percentage: dict[GleasonGrade, float]) -> GleasonScore | None:
+    """Calculate Gleason score from grade percentages.
+
+    Primary grade: highest percentage (if tied, highest Gleason grade wins).
+    Secondary grade (by priority):
+      1. If only one grade present: Primary (duplicated).
+      2. Highest grade present if > Primary (regardless of percentage).
+      3. Second highest by percentage if > 5%.
+      4. Primary (duplicated) otherwise.
+
+    Returns None if no cancer detected (empty dict or all percentages are 0).
+    """
+    # Secondary sort key (grade) resolves ties in percentage
+    sorted_grades = sorted(
+        [(grade, pct) for grade, pct in grade_to_percentage.items() if pct > 0.0],
+        key=lambda x: (x[1], x[0]),
+        reverse=True,
+    )
+
+    if not sorted_grades:
+        return None
+
+    primary = sorted_grades[0][0]
+
+    if len(sorted_grades) == 1:
+        return GleasonScore(primary=primary, secondary=primary)
+
+    higher_grades = [grade for grade, _ in sorted_grades[1:] if grade > primary]
+    if higher_grades:
+        return GleasonScore(primary=primary, secondary=max(higher_grades))
+
+    second_grade, second_pct = sorted_grades[1]
+    if second_pct > 5.0:
+        return GleasonScore(primary=primary, secondary=second_grade)
+
+    return GleasonScore(primary=primary, secondary=primary)
