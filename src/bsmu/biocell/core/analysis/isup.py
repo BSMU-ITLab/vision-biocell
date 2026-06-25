@@ -3,12 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+import numpy as np
+
+from bsmu.biocell.core.converters.gleason_to_pixel import GLEASON_TO_PIXEL_CLASS
 from bsmu.biocell.core.data.vector.shapes.cancer_span import CancerSpan
-from bsmu.biocell.core.domain.gleason import GleasonGrade
+from bsmu.biocell.core.domain import GleasonGrade, PixelClass
 
 if TYPE_CHECKING:
     from typing import Sequence
 
+    from bsmu.vision.core.data.raster import Raster
     from bsmu.vision.core.data.vector.shapes import Polyline
 
 
@@ -20,10 +24,11 @@ class IsupResult:
     area: dict[GleasonGrade, float] | None = None
 
 
-def analyze(polylines: Sequence[Polyline]) -> IsupResult:
-    """Analyze completed polylines and return ISUP result.
+def analyze(polylines: Sequence[Polyline], mask: Raster | None = None) -> IsupResult:
+    """Analyze completed polylines and optionally mask for ISUP result.
 
     Only completed polylines and their completed CancerSpan children are considered.
+    If mask is provided, area percentages are calculated; otherwise area is None.
     """
     completed_polylines = [p for p in polylines if p.is_completed]
 
@@ -37,11 +42,12 @@ def analyze(polylines: Sequence[Polyline]) -> IsupResult:
 
     linear = _calculate_linear(completed_polylines, total_tissue_length)
     linear_through = _calculate_linear_through(completed_polylines, total_tissue_length)
+    area = _calculate_area(mask) if mask is not None else None
 
     return IsupResult(
         linear=linear,
         linear_through=linear_through,
-        area=None,
+        area=area,
     )
 
 
@@ -136,3 +142,22 @@ def _merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, 
 
     merged_intervals.append((current_start, current_end))
     return merged_intervals
+
+
+def _calculate_area(mask: Raster) -> dict[GleasonGrade, float]:
+    """Calculate area percentages from mask.
+
+    Returns dict with percentages for each Gleason grade.
+    """
+    pixels = mask.pixels
+    if pixels is None:
+        return {grade: 0.0 for grade in GleasonGrade}
+
+    tissue_area = np.sum(~np.isin(pixels, [PixelClass.BACKGROUND, PixelClass.IGNORE]))
+    if tissue_area == 0:
+        return {grade: 0.0 for grade in GleasonGrade}
+
+    return {
+        grade: (np.sum(pixels == GLEASON_TO_PIXEL_CLASS[grade]) / tissue_area) * 100.0
+        for grade in GleasonGrade
+    }

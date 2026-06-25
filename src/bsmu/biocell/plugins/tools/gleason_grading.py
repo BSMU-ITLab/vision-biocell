@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 
 from bsmu.biocell.actors.shape.cancer_span import CancerSpanActor
 from bsmu.biocell.core.data.vector.shapes.cancer_span import CancerSpan
-from bsmu.biocell.core.domain.gleason import GleasonGrade
+from bsmu.biocell.core.domain import GleasonGrade
 from bsmu.vision.actors.shape import PolylineActor
 from bsmu.vision.actors.shape.constrained import SnappedSpanActor
 from bsmu.vision.core.data.vector.shapes import NodeBasedShape
@@ -49,8 +49,8 @@ class CancerSpanFactory(SnappedSpanFactory):
         return CancerSpan(self._gleason_grade, parent_shape=parent_shape)
 
 
-class CancerSegmentTool(LayeredDataViewerTool):
-    def __init__(self, viewer: LayeredDataViewer, undo_manager: UndoManager, settings: CancerSegmentToolSettings):
+class GleasonGradingTool(LayeredDataViewerTool):
+    def __init__(self, viewer: LayeredDataViewer, undo_manager: UndoManager, settings: GleasonGradingToolSettings):
         super().__init__(viewer, undo_manager, settings)
 
         self._polyline_subtool = PolylineTool(viewer, undo_manager, settings)
@@ -117,7 +117,7 @@ class CancerSegmentTool(LayeredDataViewerTool):
             print('No tissue area available for percentage calculation')
 
 
-class CancerSegmentToolSettings(LayeredDataViewerToolSettings):
+class GleasonGradingToolSettings(LayeredDataViewerToolSettings):
     annotation_mode_changed = Signal(AnnotationMode)
     gleason_grade_changed = Signal(GleasonGrade)
 
@@ -154,8 +154,8 @@ class CancerSegmentToolSettings(LayeredDataViewerToolSettings):
             self.gleason_grade_changed.emit(self._gleason_grade)
 
 
-class CancerSegmentToolSettingsWidget(ViewerToolSettingsWidget):
-    def __init__(self, tool_settings: CancerSegmentToolSettings, parent: QWidget = None):
+class GleasonGradingToolSettingsWidget(ViewerToolSettingsWidget):
+    def __init__(self, tool_settings: GleasonGradingToolSettings, parent: QWidget = None):
         super().__init__(tool_settings, parent)
 
         annotation_mode_group_box_layout = QVBoxLayout()
@@ -229,17 +229,17 @@ class CancerSegmentToolSettingsWidget(ViewerToolSettingsWidget):
             self._gleason_grade_to_radio_button[gleason_grade].setChecked(True)
 
 
-class CancerSegmentToolPlugin(ViewerToolPlugin):
+class GleasonGradingToolPlugin(ViewerToolPlugin):
     def __init__(
             self,
             main_window_plugin: MainWindowPlugin,
             mdi_plugin: MdiPlugin,
             undo_plugin: UndoPlugin,
             palette_pack_settings_plugin: PalettePackSettingsPlugin,
-            tool_cls: type[ViewerTool] = CancerSegmentTool,
-            tool_settings_cls: type[ViewerToolSettings] = CancerSegmentToolSettings,
-            tool_settings_widget_cls: type[ViewerToolSettingsWidget] = CancerSegmentToolSettingsWidget,
-            action_name: str = QObject.tr('Cancer Segment'),
+            tool_cls: type[ViewerTool] = GleasonGradingTool,
+            tool_settings_cls: type[ViewerToolSettings] = GleasonGradingToolSettings,
+            tool_settings_widget_cls: type[ViewerToolSettingsWidget] = GleasonGradingToolSettingsWidget,
+            action_name: str = QObject.tr('Gleason Grading'),
             action_shortcut: Qt.Key = Qt.Key_4,
     ):
         super().__init__(
