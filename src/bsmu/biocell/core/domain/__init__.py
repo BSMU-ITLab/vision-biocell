@@ -1,2 +1,2 @@
-from .gleason import GleasonGrade, GleasonScore
+from .gleason import GleasonGrade, GleasonScore, IsupGradeGroup
 from .pixel_class import PixelClass

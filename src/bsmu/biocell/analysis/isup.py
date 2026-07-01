@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from bsmu.biocell.core.converters.gleason_to_pixel import GLEASON_TO_PIXEL_CLASS
 from bsmu.biocell.core.data.vector.shapes.cancer_span import CancerSpan
-from bsmu.biocell.core.domain import GleasonGrade, GleasonScore, PixelClass
+from bsmu.biocell.core.domain import GleasonGrade, PixelClass
+from bsmu.biocell.core.domain.gleason_analysis import GleasonAnalysisReport, GleasonGradeDistribution
 
 if TYPE_CHECKING:
     from typing import Sequence
@@ -16,52 +16,37 @@ if TYPE_CHECKING:
     from bsmu.vision.core.data.vector.shapes import Polyline
 
 
-@dataclass(frozen=True)
-class IsupResult:
-    """Result of ISUP analysis with percentages for each Gleason grade."""
-    linear: dict[GleasonGrade, float] = field(default_factory=dict)
-    linear_through: dict[GleasonGrade, float] = field(default_factory=dict)
-    area: dict[GleasonGrade, float] | None = None
-
-
-def analyze(polylines: Sequence[Polyline], mask: Raster | None = None) -> IsupResult:
+def analyze(polylines: Sequence[Polyline], mask: Raster | None = None) -> GleasonAnalysisReport:
     """Analyze completed polylines and optionally mask for ISUP result.
 
     Only completed polylines and their completed CancerSpan children are considered.
     If mask is provided, area percentages are calculated; otherwise area is None.
     """
     completed_polylines = [p for p in polylines if p.is_completed]
-
-    if not completed_polylines:
-        return _empty_result()
-
     total_tissue_length = sum(p.length for p in completed_polylines)
 
-    if total_tissue_length <= 0.0:
-        return _empty_result()
+    if total_tissue_length > 0.0:
+        linear = _calculate_linear(completed_polylines, total_tissue_length)
+        linear_through = _calculate_linear_through(completed_polylines, total_tissue_length)
+    else:
+        linear = _empty_distribution()
+        linear_through = _empty_distribution()
 
-    linear = _calculate_linear(completed_polylines, total_tissue_length)
-    linear_through = _calculate_linear_through(completed_polylines, total_tissue_length)
     area = _calculate_area(mask) if mask is not None else None
 
-    return IsupResult(
+    return GleasonAnalysisReport(
         linear=linear,
         linear_through=linear_through,
         area=area,
     )
 
 
-def _empty_result() -> IsupResult:
-    """Return result with zero percentages for all grades."""
-    zero_dict = {grade: 0.0 for grade in GleasonGrade}
-    return IsupResult(
-        linear=zero_dict.copy(),
-        linear_through=zero_dict.copy(),
-        area=None,
-    )
+def _empty_distribution() -> GleasonGradeDistribution:
+    """Return distribution with zero percentages for all grades."""
+    return GleasonGradeDistribution(grade_to_percentage={grade: 0.0 for grade in GleasonGrade})
 
 
-def _calculate_linear(polylines: Sequence[Polyline], total_length: float) -> dict[GleasonGrade, float]:
+def _calculate_linear(polylines: Sequence[Polyline], total_length: float) -> GleasonGradeDistribution:
     """Calculate linear percentages by merging intervals per polyline."""
     grade_to_total_merged_length: dict[GleasonGrade, float] = {
         grade: 0.0 for grade in GleasonGrade
@@ -86,13 +71,14 @@ def _calculate_linear(polylines: Sequence[Polyline], total_length: float) -> dic
                 merged_length = sum(end - start for start, end in merged_intervals)
                 grade_to_total_merged_length[grade] += merged_length
 
-    return {
+    grade_to_percentage = {
         grade: (length / total_length) * 100.0
         for grade, length in grade_to_total_merged_length.items()
     }
+    return GleasonGradeDistribution(grade_to_percentage=grade_to_percentage)
 
 
-def _calculate_linear_through(polylines: Sequence[Polyline], total_length: float) -> dict[GleasonGrade, float]:
+def _calculate_linear_through(polylines: Sequence[Polyline], total_length: float) -> GleasonGradeDistribution:
     """Calculate linear-through percentages using bounding box per polyline."""
     grade_to_total_bounding_length: dict[GleasonGrade, float] = {
         grade: 0.0 for grade in GleasonGrade
@@ -118,10 +104,11 @@ def _calculate_linear_through(polylines: Sequence[Polyline], total_length: float
                 )
                 grade_to_total_bounding_length[grade] += (max_end - min_start)
 
-    return {
+    grade_to_percentage = {
         grade: (length / total_length) * 100.0
         for grade, length in grade_to_total_bounding_length.items()
     }
+    return GleasonGradeDistribution(grade_to_percentage=grade_to_percentage)
 
 
 def _merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, float]]:
@@ -144,58 +131,21 @@ def _merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, 
     return merged_intervals
 
 
-def _calculate_area(mask: Raster) -> dict[GleasonGrade, float]:
-    """Calculate area percentages from mask.
+def _calculate_area(mask: Raster) -> GleasonGradeDistribution | None:
+    """Calculate area percentages from mask."""
+    if mask is None:
+        return None
 
-    Returns dict with percentages for each Gleason grade.
-    """
     pixels = mask.pixels
     if pixels is None:
-        return {grade: 0.0 for grade in GleasonGrade}
+        return None
 
     tissue_area = np.sum(~np.isin(pixels, [PixelClass.BACKGROUND, PixelClass.IGNORE]))
     if tissue_area == 0:
-        return {grade: 0.0 for grade in GleasonGrade}
+        return _empty_distribution()
 
-    return {
+    grade_to_percentage = {
         grade: (np.sum(pixels == GLEASON_TO_PIXEL_CLASS[grade]) / tissue_area) * 100.0
         for grade in GleasonGrade
     }
-
-
-def calculate_gleason_score(grade_to_percentage: dict[GleasonGrade, float]) -> GleasonScore | None:
-    """Calculate Gleason score from grade percentages.
-
-    Primary grade: highest percentage (if tied, highest Gleason grade wins).
-    Secondary grade (by priority):
-      1. If only one grade present: Primary (duplicated).
-      2. Highest grade present if > Primary (regardless of percentage).
-      3. Second highest by percentage if > 5%.
-      4. Primary (duplicated) otherwise.
-
-    Returns None if no cancer detected (empty dict or all percentages are 0).
-    """
-    # Secondary sort key (grade) resolves ties in percentage
-    sorted_grades = sorted(
-        [(grade, pct) for grade, pct in grade_to_percentage.items() if pct > 0.0],
-        key=lambda x: (x[1], x[0]),
-        reverse=True,
-    )
-
-    if not sorted_grades:
-        return None
-
-    primary = sorted_grades[0][0]
-
-    if len(sorted_grades) == 1:
-        return GleasonScore(primary=primary, secondary=primary)
-
-    higher_grades = [grade for grade, _ in sorted_grades[1:] if grade > primary]
-    if higher_grades:
-        return GleasonScore(primary=primary, secondary=max(higher_grades))
-
-    second_grade, second_pct = sorted_grades[1]
-    if second_pct > 5.0:
-        return GleasonScore(primary=primary, secondary=second_grade)
-
-    return GleasonScore(primary=primary, secondary=primary)
+    return GleasonGradeDistribution(grade_to_percentage=grade_to_percentage)

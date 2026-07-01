@@ -1,25 +1,87 @@
 gleason_3_segmenter_model:  # trained on Gleason >= 3
-  name: '2024.07.31-v6-segformer-tu-edgenext-small-panda-empty-512x512-gl3.onnx'
+  name: 'v10-678-64-segformer-sum-tu-convnext_base.fb_in22k_ft_in1k_384-panda+empty(384, 384)[(3, 4, 5), (4, 5)].onnx'
   output_object_name: 'Prostate Cancer Gleason >= 3'
   output_object_short_name: 'PCa G>=3'
   preload: false
   batch_size: 10
-  input_size: [3, 512, 512]
+  input_size: [3, 384, 384]
   channels_axis: 0
   channels_order: 'rgb'
   normalize: false
-  preprocessing_mode: 'image-net-torch'
-  mask_binarization_threshold: 1.7346
+  preprocessing_mode: ''
+  input_type: 'uint8'
+  output_channels: 0
+  mask_binarization_threshold: 0.8473
 
 gleason_4_segmenter_model:  # trained on Gleason >= 4
-  name: '2024.07.31-v6-segformer-tu-edgenext-small-panda-empty-512x512-gl4.onnx'
+  name: 'v10-678-64-segformer-sum-tu-convnext_base.fb_in22k_ft_in1k_384-panda+empty(384, 384)[(3, 4, 5), (4, 5)].onnx'
   output_object_name: 'Prostate Cancer Gleason >= 4'
   output_object_short_name: 'PCa G>=4'
   preload: false
   batch_size: 10
-  input_size: [3, 512, 512]
+  input_size: [3, 384, 384]
   channels_axis: 0
   channels_order: 'rgb'
   normalize: false
-  preprocessing_mode: 'image-net-torch'
-  mask_binarization_threshold: 0.6190
+  preprocessing_mode: ''
+  input_type: 'uint8'
+  output_channels: 1
+  mask_binarization_threshold: 1.0986
+
+
+#gleason_3_segmenter_model:  # trained on Gleason >= 3
+#  name: 'v8-segformer-tu-resnetv2_50x1_bit.goog_distilled_in1k-panda+empty(512, 512)[(3, 4, 5), (4, 5)].onnx'
+#  output_object_name: 'Prostate Cancer Gleason >= 3'
+#  output_object_short_name: 'PCa G>=3'
+#  preload: false
+#  batch_size: 10
+#  input_size: [3, 512, 512]
+#  channels_axis: 0
+#  channels_order: 'rgb'
+#  normalize: false
+#  preprocessing_mode: ''
+#  input_type: 'uint8'
+#  output_channels: 0
+#  mask_binarization_threshold: 1.0986
+#
+#gleason_4_segmenter_model:  # trained on Gleason >= 4
+#  name: 'v8-segformer-tu-resnetv2_50x1_bit.goog_distilled_in1k-panda+empty(512, 512)[(3, 4, 5), (4, 5)].onnx'
+#  output_object_name: 'Prostate Cancer Gleason >= 4'
+#  output_object_short_name: 'PCa G>=4'
+#  preload: false
+#  batch_size: 10
+#  input_size: [3, 512, 512]
+#  channels_axis: 0
+#  channels_order: 'rgb'
+#  normalize: false
+#  preprocessing_mode: ''
+#  input_type: 'uint8'
+#  output_channels: 1
+#  mask_binarization_threshold: 1.0986
+
+
+#gleason_3_segmenter_model:  # trained on Gleason >= 3
+#  name: '2024.07.31-v6-segformer-tu-edgenext-small-panda-empty-512x512-gl3.onnx'
+#  output_object_name: 'Prostate Cancer Gleason >= 3'
+#  output_object_short_name: 'PCa G>=3'
+#  preload: false
+#  batch_size: 10
+#  input_size: [3, 512, 512]
+#  channels_axis: 0
+#  channels_order: 'rgb'
+#  normalize: false
+#  preprocessing_mode: 'image-net-torch'
+#  mask_binarization_threshold: 1.7346
+#
+#gleason_4_segmenter_model:  # trained on Gleason >= 4
+#  name: '2024.07.31-v6-segformer-tu-edgenext-small-panda-empty-512x512-gl4.onnx'
+#  output_object_name: 'Prostate Cancer Gleason >= 4'
+#  output_object_short_name: 'PCa G>=4'
+#  preload: false
+#  batch_size: 10
+#  input_size: [3, 512, 512]
+#  channels_axis: 0
+#  channels_order: 'rgb'
+#  normalize: false
+#  preprocessing_mode: 'image-net-torch'
+#  mask_binarization_threshold: 0.6190

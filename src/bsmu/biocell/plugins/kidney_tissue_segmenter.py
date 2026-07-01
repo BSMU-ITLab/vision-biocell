@@ -14,7 +14,7 @@ from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.palette import Palette
 from bsmu.vision.core.plugins import Plugin
 from bsmu.vision.plugins.windows.main import AlgorithmsMenu
-from bsmu.vision.widgets.viewers.image.layered import LayeredImageViewerHolder
+from bsmu.vision.widgets.viewers.layered import LayeredDataViewerHolder
 
 if TYPE_CHECKING:
     from bsmu.vision.plugins.windows.main import MainWindowPlugin, MainWindow
@@ -71,28 +71,28 @@ class KidneyTissueSegmenterPlugin(Plugin):
         raise NotImplementedError
 
     def _segment_tissue(self):
-        layered_image_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredImageViewerHolder)
-        if layered_image_viewer_sub_window is None:
+        layered_data_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredDataViewerHolder)
+        if layered_data_viewer_sub_window is None:
             return
 
-        layered_image_viewer = layered_image_viewer_sub_window.layered_image_viewer
-        self._kidney_tissue_segmenter.segment_tissue(layered_image_viewer)
+        layered_data_viewer = layered_data_viewer_sub_window.layered_data_viewer
+        self._kidney_tissue_segmenter.segment_tissue(layered_data_viewer)
 
     def _segment_tissue_using_saturation_threshold(self):
-        layered_image_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredImageViewerHolder)
-        if layered_image_viewer_sub_window is None:
+        layered_data_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredDataViewerHolder)
+        if layered_data_viewer_sub_window is None:
             return
 
-        layered_image_viewer = layered_image_viewer_sub_window.layered_image_viewer
-        self._kidney_tissue_segmenter.segment_tissue_using_saturation_threshold(layered_image_viewer)
+        layered_data_viewer = layered_data_viewer_sub_window.layered_data_viewer
+        self._kidney_tissue_segmenter.segment_tissue_using_saturation_threshold(layered_data_viewer)
 
     def _analyze_blue_ratio(self):
-        layered_image_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredImageViewerHolder)
-        if layered_image_viewer_sub_window is None:
+        layered_data_viewer_sub_window = self._mdi.active_sub_window_with_type(LayeredDataViewerHolder)
+        if layered_data_viewer_sub_window is None:
             return
 
-        layered_image_viewer = layered_image_viewer_sub_window.layered_image_viewer
-        self._kidney_tissue_segmenter.analyze_blue_ratio(layered_image_viewer)
+        layered_data_viewer = layered_data_viewer_sub_window.layered_data_viewer
+        self._kidney_tissue_segmenter.analyze_blue_ratio(layered_data_viewer)
 
 
 def show_rgb(rgb: np.ndarray, title: str = ''):
