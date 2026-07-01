@@ -302,6 +302,8 @@ class IsupAnalysisDialog(QDialog):
             method_item = QTableWidgetItem(method)
             method_item.setFont(bold_font)
             self._table.setItem(row, 0, method_item)
+            if method == 'Linear Through':
+                method_item.setToolTip('Alternative method; score and ISUP grade hidden to avoid confusion')
 
             # Percentages
             for grade in GleasonGrade:
@@ -313,16 +315,22 @@ class IsupAnalysisDialog(QDialog):
                 item.setData(BACKGROUND_COLOR_ROLE, gleason_to_color[grade])
                 self._table.setItem(row, col, item)
 
-            # Gleason Score
-            score = dist.score if dist else None
-            score_text = str(score) if score else '—'
+            # Gleason Score - hide for Linear Through
+            if method == 'Linear Through':
+                score_text = '—'
+            else:
+                score = dist.score if dist else None
+                score_text = str(score) if score else '—'
             score_item = QTableWidgetItem(score_text)
             score_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._table.setItem(row, 4, score_item)
 
-            # ISUP Grade Group
-            grade_group = dist.isup_grade_group if dist else None
-            grade_text = str(grade_group.value) if grade_group else '—'
+            # ISUP Grade Group - hide for Linear Through
+            if method == 'Linear Through':
+                grade_text = '—'
+            else:
+                grade_group = dist.isup_grade_group if dist else None
+                grade_text = str(grade_group.value) if grade_group else '—'
             grade_item = QTableWidgetItem(grade_text)
             grade_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._table.setItem(row, 5, grade_item)

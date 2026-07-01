@@ -29,8 +29,8 @@ def analyze(polylines: Sequence[Polyline], mask: Raster | None = None) -> Gleaso
         linear = _calculate_linear(completed_polylines, total_tissue_length)
         linear_through = _calculate_linear_through(completed_polylines, total_tissue_length)
     else:
-        linear = _empty_distribution()
-        linear_through = _empty_distribution()
+        linear = None
+        linear_through = None
 
     area = _calculate_area(mask) if mask is not None else None
 
@@ -39,11 +39,6 @@ def analyze(polylines: Sequence[Polyline], mask: Raster | None = None) -> Gleaso
         linear_through=linear_through,
         area=area,
     )
-
-
-def _empty_distribution() -> GleasonGradeDistribution:
-    """Return distribution with zero percentages for all grades."""
-    return GleasonGradeDistribution(grade_to_percentage={grade: 0.0 for grade in GleasonGrade})
 
 
 def _calculate_linear(polylines: Sequence[Polyline], total_length: float) -> GleasonGradeDistribution:
@@ -133,16 +128,13 @@ def _merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, 
 
 def _calculate_area(mask: Raster) -> GleasonGradeDistribution | None:
     """Calculate area percentages from mask."""
-    if mask is None:
-        return None
-
     pixels = mask.pixels
     if pixels is None:
         return None
 
     tissue_area = np.sum(~np.isin(pixels, [PixelClass.BACKGROUND, PixelClass.IGNORE]))
     if tissue_area == 0:
-        return _empty_distribution()
+        return None
 
     grade_to_percentage = {
         grade: (np.sum(pixels == GLEASON_TO_PIXEL_CLASS[grade]) / tissue_area) * 100.0

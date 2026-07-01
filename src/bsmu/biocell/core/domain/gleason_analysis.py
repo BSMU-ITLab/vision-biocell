@@ -65,6 +65,6 @@ class GleasonGradeDistribution:
 @dataclass(frozen=True)
 class GleasonAnalysisReport:
     """Complete ISUP analysis report with results from all methods."""
-    linear: GleasonGradeDistribution
-    linear_through: GleasonGradeDistribution
+    linear: GleasonGradeDistribution | None
+    linear_through: GleasonGradeDistribution | None
     area: GleasonGradeDistribution | None = None
