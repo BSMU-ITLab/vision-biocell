@@ -59,4 +59,4 @@ class GleasonScore:
 
     def __str__(self) -> str:
         """Return formatted score like '3+4'."""
-        return f'{self.primary}+{self.secondary}'
+        return f'{self.total} ({self.primary}+{self.secondary})'

@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWidgets import QStyledItemDelegate
 
-from bsmu.biocell.analysis.isup import analyze
+from bsmu.biocell.analysis.isup import analyze as analyze_isup
 from bsmu.biocell.core.domain import GleasonGrade, IsupGradeGroup
 from bsmu.biocell.core.domain.gleason_analysis import GleasonAnalysisReport
 from bsmu.vision.core.config import Config
@@ -43,12 +43,16 @@ class IsupAnalysisConfig(Config):
 
 class ColoredTableHeaderStyle(QProxyStyle):
     def drawControl(self, element, option, painter, widget=None):
+        # Let the base style draw first (including borders/grid)
         self.baseStyle().drawControl(element, option, painter, widget)
 
         if element == QStyle.ControlElement.CE_HeaderSection and isinstance(widget, QHeaderView):
+            # Now overlay the background color from the palette
+            # The palette's Window brush is set by headerItem.setBackground()
             bg_brush = option.palette.brush(QPalette.ColorRole.Window)
-            if bg_brush != option.palette.brush(QPalette.ColorRole.Base):
-                r = option.rect.adjusted(0, 0, -1, -1)
+            if bg_brush != option.palette.brush(QPalette.ColorRole.Base):  # avoid redundant fill
+                # Shrink rect slightly to avoid painting over borders
+                r = option.rect.adjusted(0, 0, -1, -1)  # remove 1px from right and bottom
                 painter.fillRect(r, bg_brush)
 
 
@@ -67,6 +71,8 @@ class IsupAnalysisPlugin(Plugin):
         self._dialog: IsupAnalysisDialog | None = None
 
     def _enable_gui(self):
+        # Enable custom header background colors by installing a proxy style that respects
+        # the QPalette.Window brush set on header items (which Qt's default styles ignore).
         QApplication.setStyle(ColoredTableHeaderStyle(QApplication.style()))
 
         self._main_window = self._main_window_plugin.main_window
@@ -74,7 +80,7 @@ class IsupAnalysisPlugin(Plugin):
             AlgorithmsMenu,
             self.tr('Analyze ISUP Grade Group'),
             self._analyze_isup,
-            QKeySequence(),
+            QKeySequence(),  # no shortcut
         )
         self._mdi = self._mdi_plugin.mdi
 
@@ -95,7 +101,7 @@ class IsupAnalysisPlugin(Plugin):
             isup_config = IsupAnalysisConfig.from_dict(self.config.full_data)
             self._dialog = IsupAnalysisDialog(viewer, isup_config, self._main_window)
 
-        self._dialog.refresh()
+        self._dialog.analyze()
         self._dialog.show()
         self._dialog.raise_()
 
@@ -149,6 +155,13 @@ gleason_to_color = {
 }
 
 
+gleason_to_column_index = {
+    GleasonGrade.G3: 1,
+    GleasonGrade.G4: 2,
+    GleasonGrade.G5: 3,
+}
+
+
 class IsupAnalysisDialog(QDialog):
     def __init__(self, viewer: LayeredDataViewer, isup_config: IsupAnalysisConfig, parent=None) -> None:
         super().__init__(parent)
@@ -171,10 +184,10 @@ class IsupAnalysisDialog(QDialog):
 
         # Buttons
         button_layout = QHBoxLayout()
-        refresh_button = QPushButton(self.tr('Refresh'))
-        refresh_button.clicked.connect(self.refresh)
-        refresh_button.setDefault(True)
-        refresh_button.setAutoDefault(True)
+        analyze_button = QPushButton(self.tr('Analyze'))
+        analyze_button.clicked.connect(self.analyze)
+        analyze_button.setDefault(True)
+        analyze_button.setAutoDefault(True)
 
         self._table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._table.setTabKeyNavigation(False)
@@ -183,17 +196,17 @@ class IsupAnalysisDialog(QDialog):
         close_button.clicked.connect(self.close)
 
         button_layout.addStretch()
-        button_layout.addWidget(refresh_button)
+        button_layout.addWidget(analyze_button)
         button_layout.addWidget(close_button)
         layout.addLayout(button_layout)
 
-        refresh_button.setFocus()
+        analyze_button.setFocus()
 
-        self.resize(600, 450)
+        self.resize(500, 450)
 
     def _setup_table(self):
         self._table.setColumnCount(6)
-        self._table.setHorizontalHeaderLabels(['Method', 'Gl 3', 'Gl 4', 'Gl 5', 'Gleason Score', 'ISUP Grade'])
+        self._table.setHorizontalHeaderLabels(['Method', 'Gl 3, %', 'Gl 4, %', 'Gl 5, %', 'Gl Score', 'ISUP Grade'])
 
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -216,12 +229,12 @@ class IsupAnalysisDialog(QDialog):
         self._table.horizontalHeader().setFont(header_font)
 
         # Color-code Gleason grade headers
-        for grade, color in gleason_to_color.items():
-            column_index = grade.value - 2  # G3 -> 1, G4 -> 2, G5 -> 3
+        for gleason, column_index in gleason_to_column_index.items():
             header_item = self._table.horizontalHeaderItem(column_index)
             if header_item is None:
                 header_item = QTableWidgetItem()
                 self._table.setHorizontalHeaderItem(column_index, header_item)
+            color = gleason_to_color[gleason]
             header_item.setBackground(color)
             header_item.setFont(header_font)
 
@@ -263,7 +276,7 @@ class IsupAnalysisDialog(QDialog):
                 )
         return ''.join(html_parts) if html_parts else '<i>Нет данных.</i>'
 
-    def refresh(self):
+    def analyze(self):
         # Get polylines
         polylines = [
             shape for shape in self._viewer.selection_manager.selected_shapes
@@ -283,7 +296,7 @@ class IsupAnalysisDialog(QDialog):
         mask = mask_layer.data if isinstance(mask_layer, RasterLayer) else None
 
         # Analyze
-        report = analyze(polylines, mask)
+        report = analyze_isup(polylines, mask)
 
         # Update table
         self._update_table(report)

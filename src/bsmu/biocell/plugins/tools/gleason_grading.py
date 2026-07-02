@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING
@@ -12,8 +11,6 @@ from PySide6.QtWidgets import (
 from bsmu.biocell.actors.shape.cancer_span import CancerSpanActor
 from bsmu.biocell.core.data.vector.shapes.cancer_span import CancerSpan
 from bsmu.biocell.core.domain import GleasonGrade
-from bsmu.vision.actors.shape import PolylineActor
-from bsmu.vision.actors.shape.constrained import SnappedSpanActor
 from bsmu.vision.core.data.vector.shapes import NodeBasedShape
 from bsmu.vision.plugins.tools import (
     ViewerToolSettingsWidget, ViewerTool, ViewerToolSettings, ViewerToolPlugin, CursorConfig)
@@ -64,8 +61,6 @@ class GleasonGradingTool(LayeredDataViewerTool):
 
         self._active_subtool: ViewerTool | None = None  # Sub tool (using composition)
 
-        self._polyline_span_subtool.span_created.connect(self._print_cancer_percentage)
-
     def activate(self):
         self.settings.gleason_grade_changed.connect(self._change_style_to_match_gleason_grade)
         self.settings.annotation_mode_changed.connect(self._activate_tool_to_match_annotation_mode)
@@ -90,31 +85,6 @@ class GleasonGradingTool(LayeredDataViewerTool):
 
         self._active_subtool = self._annotation_mode_to_subtool[annotation_mode]
         self._active_subtool.activate()
-
-    def _print_cancer_percentage(self):
-        gleason_grade_to_total_length = defaultdict(float)
-        polylines = []
-
-        for graphics_item in self.viewer._graphics_scene.items():
-            if isinstance(graphics_item, PolylineActor):
-                polylines.append(graphics_item.polyline)
-            elif isinstance(graphics_item, SnappedSpanActor):
-                cancer_span = graphics_item.polyline_span
-                gleason_grade_to_total_length[cancer_span.gleason_grade] += cancer_span.length
-
-        total_tissue_length = sum(p.length for p in polylines)
-        gleason_grade_to_tissue_percentage = {
-            grade: (length / total_tissue_length) * 100
-            for grade, length in gleason_grade_to_total_length.items()
-        } if total_tissue_length > 0 else {}
-
-        if gleason_grade_to_tissue_percentage:
-            print('Gleason Grade Distribution (% of tissue):')
-            for grade in GleasonGrade:
-                percentage = gleason_grade_to_tissue_percentage.get(grade, 0)
-                print(f'{grade.name}: {percentage:.1f}%')
-        else:
-            print('No tissue area available for percentage calculation')
 
 
 class GleasonGradingToolSettings(LayeredDataViewerToolSettings):
