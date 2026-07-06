@@ -13,7 +13,7 @@ plugins:
   - bsmu.vision.plugins.visualizers.image.layered.LayeredImageVisualizerPlugin
 
   - bsmu.vision.plugins.overlayers.image.ImageViewerOverlayerPlugin
-#  - bsmu.vision.plugins.overlayers.path.ImageViewerPathOverlayerPlugin
+  - bsmu.vision.plugins.overlayers.path.ImageViewerPathOverlayerPlugin
 #  - bsmu.vision.plugins.overlayers.intersection.ImageViewerIntersectionOverlayerPlugin
 
   - bsmu.vision.plugins.writers.image.common.CommonImageFileWriterPlugin
