@@ -14,6 +14,8 @@ from bsmu.vision.core.layers import RasterLayer
 from bsmu.vision.core.visibility import Visibility
 
 if TYPE_CHECKING:
+    from typing import Sequence
+
     from bsmu.vision.core.data import Data
     from bsmu.vision.plugins.doc_interfaces.mdi import Mdi
     from bsmu.vision.widgets.mdi.windows.data import DataViewerSubWindow
@@ -21,14 +23,15 @@ if TYPE_CHECKING:
 
 
 class MultipassTiledMdiSegmenter(MdiSegmenter):
-    def __init__(self, segmenter: MultipassTiledSegmenter, mdi: Mdi):
+    def __init__(self, segmenter: MultipassTiledSegmenter, mdi: Mdi, class_index: int = 0):
         super().__init__(mdi)
 
         self._segmenter = segmenter
+        self._class_index = class_index
 
     @property
     def mask_foreground_class(self) -> int:
-        return self._segmenter.mask_foreground_class
+        return self._segmenter.mask_foreground_classes[self._class_index]
 
     @property
     def mask_background_class(self) -> int:
@@ -55,12 +58,14 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
 
     def _on_segmentation_finished(
             self,
-            mask: np.ndarray,
+            masks: Sequence[np.ndarray],
             layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
     ):
-        self.update_mask_layer(mask, layered_data, mask_layer_name, mask_draw_mode)
+        # For single-class segmenters: masks has 1 element
+        # For multiclass segmenters called individually: masks has N elements, but we only draw our class_index
+        self.update_mask_layer(masks[self._class_index], layered_data, mask_layer_name, mask_draw_mode)
 
     def update_mask_layer_partially(
             self,

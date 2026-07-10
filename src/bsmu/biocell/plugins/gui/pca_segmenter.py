@@ -86,16 +86,25 @@ class PcaSegmenterGuiPlugin(Plugin):
         self._data_visualization_manager = self._data_visualization_manager_plugin.data_visualization_manager
         # self._data_visualization_manager.data_visualized.connect(self._pca_gleason_3_segmenter_gui.on_data_visualized)
 
-        self._pca_gleason_3_segmenter_gui = MultipassTiledMdiSegmenter(
-            self._pca_segmenter_plugin.pca_gleason_3_segmenter, self._mdi)
-        self._pca_gleason_4_segmenter_gui = MultipassTiledMdiSegmenter(
-            self._pca_segmenter_plugin.pca_gleason_4_segmenter, self._mdi)
+        # Build flat list: one MdiSegmenter per class across all segmenters
+        class_mdi_segmenters = []
+        for segmenter in self._pca_segmenter_plugin.pca_segmenter.class_segmenters:
+            for i in range(len(segmenter.mask_foreground_classes)):
+                class_mdi_segmenters.append(MultipassTiledMdiSegmenter(segmenter, self._mdi, i))
 
         self._pca_segmenter_gui = PcaMdiSegmenter(
             self._pca_segmenter_plugin.pca_segmenter,
-            [self._pca_gleason_3_segmenter_gui, self._pca_gleason_4_segmenter_gui],
+            class_mdi_segmenters,
             self._mdi,
         )
+
+        # Legacy individual segmenters (only if separate models exist)
+        if self._pca_segmenter_plugin.pca_gleason_3_segmenter is not None:
+            self._pca_gleason_3_segmenter_gui = MultipassTiledMdiSegmenter(
+                self._pca_segmenter_plugin.pca_gleason_3_segmenter, self._mdi)
+        if self._pca_segmenter_plugin.pca_gleason_4_segmenter is not None:
+            self._pca_gleason_4_segmenter_gui = MultipassTiledMdiSegmenter(
+                self._pca_segmenter_plugin.pca_gleason_4_segmenter, self._mdi)
 
         # self._main_window.add_menu_action(AlgorithmsMenu, 'Segment Prostate Tissue', self._segment_prostate_tissue)
 
@@ -103,14 +112,16 @@ class PcaSegmenterGuiPlugin(Plugin):
             self.tr('Segment Cancer'),
             partial(self._pca_segmenter_gui.segment_async, mask_layer_name='masks'),
         )
-        self._add_segmentation_submenu(
-            self.tr('Segment Gleason >= 3'),
-            partial(self._pca_gleason_3_segmenter_gui.segment_async, mask_layer_name='gleason >= 3'),
-        )
-        self._add_segmentation_submenu(
-            self.tr('Segment Gleason >= 4'),
-            partial(self._pca_gleason_4_segmenter_gui.segment_async, mask_layer_name='gleason >= 4'),
-        )
+        if self._pca_gleason_3_segmenter_gui is not None:
+            self._add_segmentation_submenu(
+                self.tr('Segment Gleason >= 3'),
+                partial(self._pca_gleason_3_segmenter_gui.segment_async, mask_layer_name='gleason >= 3'),
+            )
+        if self._pca_gleason_4_segmenter_gui is not None:
+            self._add_segmentation_submenu(
+                self.tr('Segment Gleason >= 4'),
+                partial(self._pca_gleason_4_segmenter_gui.segment_async, mask_layer_name='gleason >= 4'),
+            )
 
     def _disable(self):
         self._pca_segmenter_gui = None
@@ -164,6 +175,9 @@ class PcaMdiSegmenter(MdiSegmenter):
 
         self._pca_segmenter = pca_segmenter
         self._class_mdi_segmenters = class_mdi_segmenters
+        # TODO: These MdiSegmenter wrappers are only used for their rendering logic (update_mask_layer).
+        #  The actual segmentation is orchestrated by self._pca_segmenter.
+        #  A cleaner architecture would decouple execution from rendering, e.g. via a dedicated MaskRenderer class.
 
     def segment_async(
             self,
@@ -185,15 +199,20 @@ class PcaMdiSegmenter(MdiSegmenter):
 
     def _on_pca_segmentation_finished(
             self,
-            masks: Sequence[np.ndarray],
+            masks_per_segmenter: Sequence[Sequence[np.ndarray]],
             layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
     ):
+        # Flatten to match class_mdi_segmenters one-to-one
+        all_masks = []
+        for segmenter_masks in masks_per_segmenter:
+            all_masks.extend(segmenter_masks)
+
         # Apply the passed `mask_draw_mode` only to draw the first mask
         first = 0
         modifiable_mask = self._class_mdi_segmenters[first].update_mask_layer(
-            masks[first], layered_data, mask_layer_name, mask_draw_mode)
+            all_masks[first], layered_data, mask_layer_name, mask_draw_mode)
 
         # Apply other draw modes for subsequent masks to preserve already drawn masks
         if mask_draw_mode == MaskDrawMode.REDRAW_ALL or mask_draw_mode == MaskDrawMode.OVERLAY_FOREGROUND:
@@ -203,7 +222,7 @@ class PcaMdiSegmenter(MdiSegmenter):
         else:
             raise ValueError(f'Invalid MaskDrawMode: {mask_draw_mode}')
 
-        for class_mdi_segmenter, mask in zip(self._class_mdi_segmenters[1:], masks[1:]):
+        for class_mdi_segmenter, mask in zip(self._class_mdi_segmenters[1:], all_masks[1:]):
             update_mask_layer(class_mdi_segmenter, mask, layered_data, mask_layer_name)
 
     @staticmethod

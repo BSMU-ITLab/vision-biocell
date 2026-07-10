@@ -9,4 +9,5 @@ tissue_segmenter_model:
   channels_order: 'rgb'
   normalize: false
   preprocessing_mode: ''
-  mask_binarization_threshold: 0.619
+  output_class_names: 'non_tissue'
+  mask_binarization_thresholds: 0.619

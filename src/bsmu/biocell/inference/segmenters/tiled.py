@@ -61,7 +61,6 @@ class MultipassTiledSegmenter(QObject):
             self,
             model_params: DnnModelParams,
             mask_palette: Palette,
-            mask_foreground_class_name: str = 'foreground',
             task_storage: TaskStorage = None,
     ):
         super().__init__()
@@ -71,7 +70,10 @@ class MultipassTiledSegmenter(QObject):
 
         self._mask_palette = mask_palette
         self._mask_background_class = self._mask_palette.row_index_by_name('background')
-        self._mask_foreground_class = self._mask_palette.row_index_by_name(mask_foreground_class_name)
+        self._mask_foreground_classes = tuple(
+            self._mask_palette.row_index_by_name(name)
+            for name in model_params.output_class_names
+        )
 
         self._segmenter = DnnSegmenter(self._model_params)
 
@@ -88,17 +90,17 @@ class MultipassTiledSegmenter(QObject):
         return self._mask_background_class
 
     @property
-    def mask_foreground_class(self) -> int:
-        return self._mask_foreground_class
+    def mask_foreground_classes(self) -> Sequence[int]:
+        return self._mask_foreground_classes
 
     def segment_async(
             self,
             raster: Raster,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
-            on_finished: Callable[[np.ndarray], None] | None = None,
+            on_finished: Callable[[Sequence[np.ndarray]], None] | None = None,
     ):
         segmentation_profile = MultipassTiledSegmentationProfile(
-            self._segmenter, segmentation_mode, self._mask_background_class, self._mask_foreground_class)
+            self._segmenter, segmentation_mode, self._mask_background_class, self._mask_foreground_classes)
         segmentation_task_name = (
             f'{self._model_params.output_object_short_name} '
             f'{segmentation_mode.short_name_with_postfix} '
@@ -120,7 +122,7 @@ class TiledSegmentationTask(DnnTask):
             extra_pads: Sequence[float] = (0, 0),
             binarize_mask: bool = True,
             mask_background_class: int = 0,
-            mask_foreground_class: int = 1,
+            mask_foreground_classes: int | Sequence[int] = 1,
             tile_weights: np.ndarray | None = None,
             name: str = '',
     ):
@@ -131,13 +133,18 @@ class TiledSegmentationTask(DnnTask):
         self._extra_pads = extra_pads
         self._binarize_mask = binarize_mask
         self._mask_background_class = mask_background_class
-        self._mask_foreground_class = mask_foreground_class
+        self._mask_foreground_classes = (
+            (mask_foreground_classes,)
+            if isinstance(mask_foreground_classes, int)
+            else tuple(mask_foreground_classes)
+        )
         self._tile_weights = tile_weights
 
         self._segmented_tile_count: int = 0
         self._tile_row_count: int | None = None
         self._tile_col_count: int | None = None
         self._total_tile_count: int | None = None
+        self._weights: np.ndarray | None = None
 
     @property
     def model_params(self) -> DnnModelParams:
@@ -147,10 +154,15 @@ class TiledSegmentationTask(DnnTask):
     def tile_size(self) -> int:
         return self.model_params.input_image_size[0]
 
-    def _run(self) -> tuple[np.ndarray, np.ndarray]:
+    @property
+    def weights(self) -> np.ndarray | None:
+        """Tile weights after unpadding. Same for all classes."""
+        return self._weights
+
+    def _run(self) -> Sequence[np.ndarray]:
         return self._segment_tiled()
 
-    def _segment_tiled(self) -> tuple[np.ndarray, np.ndarray]:
+    def _segment_tiled(self) -> Sequence[np.ndarray]:
         logging.info(f'Segment image using {self.model_params.path.name} model with {self._extra_pads} extra pads')
         segmentation_start = timer()
 
@@ -161,9 +173,13 @@ class TiledSegmentationTask(DnnTask):
 
         tile_size = self.tile_size
         padded_image, pads = self._padded_image_to_tile(image, tile_size, extra_pads=self._extra_pads)
-        # Create a mask filled with `self._mask_background_class`, because this Task can be cancelled, and then
-        # we have to return correct partial mask
-        padded_mask = np.full(shape=padded_image.shape[:-1], fill_value=self._mask_background_class, dtype=np.float32)
+        # Create one mask for every foreground class filled with `self._mask_background_class`,
+        # because this Task can be cancelled, and then we have to return correct partial mask
+        num_classes = len(self._mask_foreground_classes)
+        padded_masks = [
+            np.full(shape=padded_image.shape[:-1], fill_value=self._mask_background_class, dtype=np.float32)
+            for _ in range(num_classes)
+        ]
 
         tiled_image = self._tiled_image(padded_image, tile_size)
 
@@ -171,43 +187,56 @@ class TiledSegmentationTask(DnnTask):
         self._tile_col_count = tiled_image.shape[1]
         self._total_tile_count = self._tile_row_count * self._tile_col_count
 
-        segment_tiled_args = (tiled_image, tile_size, padded_mask)
+        segment_tiled_args = (tiled_image, tile_size, padded_masks)
         if self._segmenter.model_params.batch_size == 1:
             self._segment_tiled_individually(*segment_tiled_args)
         else:
             self._segment_tiled_in_batches(*segment_tiled_args)
 
-        mask = self._unpad_image(padded_mask, pads)
+        masks = []
+        for i, padded_mask in enumerate(padded_masks):
+            mask = self._unpad_image(padded_mask, pads)
+            if self._binarize_mask:
+                threshold = self.model_params.mask_binarization_thresholds[i]
+                foreground_class = self._mask_foreground_classes[i]
+                mask = (mask > threshold).astype(np.uint8)
+                mask *= foreground_class
+            masks.append(mask)
 
-        weights = None
         if self._tile_weights is not None:
             padded_weights = np.tile(self._tile_weights, reps=(tiled_image.shape[:2]))
-            weights = self._unpad_image(padded_weights, pads)
-
-        if self._binarize_mask:
-            mask = (mask > self.model_params.mask_binarization_threshold).astype(np.uint8)
-            mask *= self._mask_foreground_class
+            self._weights = self._unpad_image(padded_weights, pads)
 
         logging.info(f'Segmentation finished. Elapsed time: {timer() - segmentation_start:.2f}')
-        return mask, weights
+        return masks
 
-    def _segment_tiled_individually(self, tiled_image: np.ndarray, tile_size: int, padded_mask: np.ndarray):
+    def _segment_tiled_individually(
+            self, tiled_image: np.ndarray, tile_size: int, padded_masks: list[np.ndarray]) -> None:
         for tile_row in range(self._tile_row_count):
             for tile_col in range(self._tile_col_count):
                 # if self._is_cancelled:
-                #     return mask, weights
+                #     return
 
                 tile = tiled_image[tile_row, tile_col]
                 tile_mask = self._segmenter.segment(tile)
 
                 row = tile_row * tile_size
                 col = tile_col * tile_size
-                padded_mask[row:(row + tile_size), col:(col + tile_size)] = tile_mask
+
+                # Break down the multi-channel output into separate 2D masks
+                if tile_mask.ndim == 2:
+                    padded_masks[0][row:(row + tile_size), col:(col + tile_size)] = tile_mask
+                else:
+                    channels_axis = self.model_params.channels_axis
+                    for class_index in range(len(padded_masks)):
+                        tile_channel_mask = np.take(tile_mask, class_index, axis=channels_axis)
+                        padded_masks[class_index][row:(row + tile_size), col:(col + tile_size)] = tile_channel_mask
 
                 self._segmented_tile_count += 1
                 self._change_step_progress(self._segmented_tile_count, self._total_tile_count)
 
-    def _segment_tiled_in_batches(self, tiled_image: np.ndarray, tile_size: int, padded_mask: np.ndarray):
+    def _segment_tiled_in_batches(
+            self, tiled_image: np.ndarray, tile_size: int, padded_masks: list[np.ndarray]) -> None:
         batch_size = self._segmenter.model_params.batch_size
 
         tile_batch = []
@@ -216,33 +245,40 @@ class TiledSegmentationTask(DnnTask):
         for tile_row in range(self._tile_row_count):
             for tile_col in range(self._tile_col_count):
                 # if self._is_cancelled:
-                #     return mask, weights
+                #     return
 
                 tile = tiled_image[tile_row, tile_col]
                 tile_batch.append(tile)
                 tile_rc_batch.append((tile_row, tile_col))
 
                 if len(tile_batch) == batch_size:
-                    self._segment_tile_batch(tile_batch, tile_rc_batch, tile_size, padded_mask)
+                    self._segment_tile_batch(tile_batch, tile_rc_batch, tile_size, padded_masks)
 
         # Process any remaining tiles in the last batch
         if tile_batch:
-            self._segment_tile_batch(tile_batch, tile_rc_batch, tile_size, padded_mask)
+            self._segment_tile_batch(tile_batch, tile_rc_batch, tile_size, padded_masks)
 
     def _segment_tile_batch(
             self,
             tile_batch: list[np.ndarray],
             tile_rc_batch: list[tuple[int, int]],
             tile_size: int,
-            padded_mask: np.ndarray,
-    ):
+            padded_masks: list[np.ndarray],
+    ) -> None:
         tile_mask_batch = self._segmenter.segment_batch_without_postresize(tile_batch)
 
         for tile_mask, (tile_mask_row, tile_mask_col) in zip(tile_mask_batch, tile_rc_batch):
             mask_row = tile_mask_row * tile_size
             mask_col = tile_mask_col * tile_size
 
-            padded_mask[mask_row:(mask_row + tile_size), mask_col:(mask_col + tile_size)] = tile_mask
+            if tile_mask.ndim == 2:
+                padded_masks[0][mask_row:(mask_row + tile_size), mask_col:(mask_col + tile_size)] = tile_mask
+            else:
+                channels_axis = self.model_params.channels_axis
+                for class_index in range(len(padded_masks)):
+                    tile_channel_mask = np.take(tile_mask, class_index, axis=channels_axis)
+                    padded_masks[class_index][
+                        mask_row:(mask_row + tile_size), mask_col:(mask_col + tile_size)] = tile_channel_mask
 
         self._segmented_tile_count += len(tile_batch)
         self._change_step_progress(self._segmented_tile_count, self._total_tile_count)
@@ -301,46 +337,55 @@ class MultipassTiledSegmentationTask(DnnTask):
 
         self._finished_subtask_count = 0
 
-    def _run(self) -> np.ndarray:
+    def _run(self) -> Sequence[np.ndarray]:
         return self._segment_multipass_tiled()
 
-    def _segment_multipass_tiled(self) -> np.ndarray:
+    def _segment_multipass_tiled(self) -> Sequence[np.ndarray]:
         assert self._segmentation_profile.extra_pads_sequence, '`extra_pads_sequence` should not be empty'
 
-        mask = None
-        weighted_mask = None
+        masks = None
+        weighted_masks = None
         weight_sum = None
         for self._finished_subtask_count, extra_pads in enumerate(self._segmentation_profile.extra_pads_sequence):
             tiled_segmentation_task = TiledSegmentationTask(
                 self._image,
                 self._segmentation_profile.segmenter,
                 extra_pads,
-                False,
-                self._segmentation_profile.mask_background_class,
-                self._segmentation_profile.mask_foreground_class,
-                self._segmentation_profile.tile_weights,
+                binarize_mask=False,
+                mask_background_class=self._segmentation_profile.mask_background_class,
+                mask_foreground_classes=self._segmentation_profile.mask_foreground_classes,
+                tile_weights=self._segmentation_profile.tile_weights,
             )
             tiled_segmentation_task.progress_changed.connect(self._on_segmentation_subtask_progress_changed)
             tiled_segmentation_task.run()
-            mask, mask_weights = tiled_segmentation_task.result
+            masks = tiled_segmentation_task.result
+            mask_weights = tiled_segmentation_task.weights
             if len(self._segmentation_profile.extra_pads_sequence) > 1:
-                if weighted_mask is None:
-                    weighted_mask = mask * mask_weights
+                if weighted_masks is None:
+                    weighted_masks = [mask * mask_weights for mask in masks]
+                    # Intentionally no .copy() here: tiled_segmentation_task dies at the end of the iteration,
+                    # so in-place mutation of its weights array is safe and avoids an extra memory copy.
                     weight_sum = mask_weights
                 else:
-                    weighted_mask += mask * mask_weights
+                    for i, mask in enumerate(masks):
+                        weighted_masks[i] += mask * mask_weights
                     weight_sum += mask_weights
 
         # `weight_sum` accumulates the sum of weights for each pixel across all masks.
         # When dividing `weighted_mask` by `weight_sum`, we normalize the mask values.
         # It's essential that no element in `weight_sum` is zero to prevent division by zero errors.
-        if weighted_mask is not None:
-            mask = weighted_mask / weight_sum
+        if weighted_masks is not None:
+            masks = [weighted_mask / weight_sum for weighted_mask in weighted_masks]
 
-        mask = (mask > self._segmentation_profile.mask_binarization_threshold).astype(np.uint8)
-        mask *= self._segmentation_profile.mask_foreground_class
+        for i, (mask, threshold, foreground_class) in enumerate(
+                zip(masks, self._segmentation_profile.mask_binarization_thresholds,
+                    self._segmentation_profile.mask_foreground_classes)
+        ):
+            mask = (mask > threshold).astype(np.uint8)
+            mask *= foreground_class
+            masks[i] = mask
 
-        return mask
+        return masks
 
     def _on_segmentation_subtask_progress_changed(self, progress: float):
         self._change_subtask_based_progress(
@@ -374,10 +419,16 @@ class MultipassTiledSegmentationProfile:
     segmenter: DnnSegmenter
     segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY
     mask_background_class: int = 0
-    mask_foreground_class: int = 1
+    mask_foreground_classes: int | Sequence[int] = 1
     tile_weights: np.ndarray | None = None
 
     def __post_init__(self):
+        self.mask_foreground_classes = (
+            (self.mask_foreground_classes,)
+            if isinstance(self.mask_foreground_classes, int)
+            else tuple(self.mask_foreground_classes)
+        )
+
         if self.tile_weights is None:
             self.tile_weights = _tile_weights(self.tile_size)
 
@@ -392,8 +443,8 @@ class MultipassTiledSegmentationProfile:
         return self.segmenter.model_params.input_image_size[0]
 
     @property
-    def mask_binarization_threshold(self) -> float:
-        return self.segmenter.model_params.mask_binarization_threshold
+    def mask_binarization_thresholds(self) -> Sequence[float]:
+        return self.segmenter.model_params.mask_binarization_thresholds
 
 
 class MulticlassMultipassTiledSegmentationTask(DnnTask):
@@ -410,18 +461,18 @@ class MulticlassMultipassTiledSegmentationTask(DnnTask):
 
         self._finished_subtask_count = 0
 
-    def _run(self) -> Sequence[np.ndarray]:
+    def _run(self) -> Sequence[Sequence[np.ndarray]]:
         return self._segment_multiclass_multipass_tiled()
 
-    def _segment_multiclass_multipass_tiled(self) -> Sequence[np.ndarray]:
-        masks = []
+    def _segment_multiclass_multipass_tiled(self) -> Sequence[Sequence[np.ndarray]]:
+        masks_per_segmenter = []
         for self._finished_subtask_count, segmentation_profile in enumerate(self._segmentation_profiles):
             tiled_segmentation_task = MultipassTiledSegmentationTask(self._image, segmentation_profile)
             tiled_segmentation_task.progress_changed.connect(self._on_segmentation_subtask_progress_changed)
             tiled_segmentation_task.run()
-            mask = tiled_segmentation_task.result
-            masks.append(mask)
-        return masks
+            class_masks = tiled_segmentation_task.result
+            masks_per_segmenter.append(class_masks)
+        return masks_per_segmenter
 
     def _on_segmentation_subtask_progress_changed(self, progress: float):
         self._change_subtask_based_progress(self._finished_subtask_count, len(self._segmentation_profiles), progress)

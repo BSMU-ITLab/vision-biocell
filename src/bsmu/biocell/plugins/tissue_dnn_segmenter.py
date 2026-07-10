@@ -43,7 +43,7 @@ class TissueDnnSegmenterPlugin(Plugin):
         main_palette = self._palette_pack_settings_plugin.settings.main_palette
         task_storage = self._task_storage_plugin.task_storage
         self._tissue_segmenter = MultipassTiledSegmenter(
-            tissue_model_params, main_palette, 'non_tissue', task_storage)
+            tissue_model_params, main_palette, task_storage)
 
     def _disable(self):
         self._tissue_segmenter = None

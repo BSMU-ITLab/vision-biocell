@@ -58,21 +58,31 @@ class PcaSegmenterPlugin(Plugin):
         return self._pca_segmenter
 
     def _enable(self):
-        gleason_3_model_params = DnnModelParams.from_config(
-            self.config_value('gleason_3_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
-        gleason_4_model_params = DnnModelParams.from_config(
-            self.config_value('gleason_4_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
-
         main_palette = self._palette_pack_settings_plugin.settings.main_palette
         task_storage = self._task_storage_plugin.task_storage
-        self._pca_gleason_3_segmenter = MultipassTiledSegmenter(
-            gleason_3_model_params, main_palette, 'gleason_3', task_storage)
-        self._pca_gleason_4_segmenter = MultipassTiledSegmenter(
-            gleason_4_model_params, main_palette, 'gleason_4', task_storage)
-        self._pca_segmenter = PcaSegmenter(
-            [self._pca_gleason_3_segmenter, self._pca_gleason_4_segmenter],
-            task_storage,
-        )
+
+        pca_model_config_data = self.config_value('pca_segmenter_model', None)
+        if pca_model_config_data is not None:
+            pca_model_params = DnnModelParams.from_config(
+                pca_model_config_data, self.data_path(self._DNN_MODELS_DIR_NAME))
+            pca_multiclass_segmenter = MultipassTiledSegmenter(
+                pca_model_params, main_palette, task_storage)
+            self._pca_segmenter = PcaSegmenter(
+                [pca_multiclass_segmenter], task_storage)
+        else:
+            gleason_3_model_params = DnnModelParams.from_config(
+                self.config_value('gleason_3_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
+            gleason_4_model_params = DnnModelParams.from_config(
+                self.config_value('gleason_4_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
+
+            self._pca_gleason_3_segmenter = MultipassTiledSegmenter(
+                gleason_3_model_params, main_palette, task_storage)
+            self._pca_gleason_4_segmenter = MultipassTiledSegmenter(
+                gleason_4_model_params, main_palette, task_storage)
+            self._pca_segmenter = PcaSegmenter(
+                [self._pca_gleason_3_segmenter, self._pca_gleason_4_segmenter],
+                task_storage,
+            )
 
     def _disable(self):
         self._pca_segmenter = None
@@ -87,11 +97,15 @@ class PcaSegmenter(QObject):
         self._class_segmenters = class_segmenters
         self._task_storage = task_storage
 
+    @property
+    def class_segmenters(self) -> Sequence[MultipassTiledSegmenter]:
+        return self._class_segmenters
+
     def segment_async(
             self,
             raster: Raster,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
-            on_finished: Callable[[Sequence[np.ndarray]], None] | None = None,
+            on_finished: Callable[[Sequence[Sequence[np.ndarray]]], None] | None = None,
     ):
         pca_segmentation_task = self.create_segmentation_task(raster, segmentation_mode)
         pca_segmentation_task.on_finished = on_finished
@@ -113,16 +127,28 @@ class PcaSegmenter(QObject):
                     class_segmenter.segmenter,
                     segmentation_mode,
                     class_segmenter.mask_background_class,
-                    class_segmenter.mask_foreground_class,
+                    class_segmenter.mask_foreground_classes,
                 )
             )
         pca_segmentation_task_name = f'PCa {segmentation_mode.short_name_with_postfix} [{raster.path_name}]'
-        return MulticlassMultipassTiledSegmentationTask(raster.pixels, segmentation_profiles, pca_segmentation_task_name)
+        return MulticlassMultipassTiledSegmentationTask(
+            raster.pixels, segmentation_profiles, pca_segmentation_task_name)
 
-    def combine_class_masks(self, class_masks: Sequence[np.ndarray]) -> np.ndarray:
-        combined_mask = class_masks[0].copy()
+    def combine_class_masks(self, class_masks_per_segmenter: Sequence[Sequence[np.ndarray]]) -> np.ndarray:
+        fg_class_to_mask_pairs = []
+        for segmenter_masks, segmenter in zip(class_masks_per_segmenter, self._class_segmenters):
+            for mask, foreground_class in zip(segmenter_masks, segmenter.mask_foreground_classes):
+                fg_class_to_mask_pairs.append((foreground_class, mask))
+
+        if not fg_class_to_mask_pairs:
+            raise ValueError('No masks to combine')
+
+        # Sort by class value: higher class overrides lower class
+        sorted_fg_class_to_mask_pairs = sorted(fg_class_to_mask_pairs, key=lambda x: x[0])
+
+        combined_mask = sorted_fg_class_to_mask_pairs[0][1].copy()
         # Skip first elements, because the `combined_mask` already contains the first mask
-        for class_mask, class_segmenter in zip(class_masks[1:], self._class_segmenters[1:]):
-            is_foreground_class = class_mask == class_segmenter.mask_foreground_class
-            combined_mask[is_foreground_class] = class_segmenter.mask_foreground_class
+        for foreground_class, mask in sorted_fg_class_to_mask_pairs[1:]:
+            is_foreground = mask == foreground_class
+            combined_mask[is_foreground] = foreground_class
         return combined_mask

@@ -131,9 +131,9 @@ class PcaFileReadingAndSegmentationTask(DnnTask):
         return self._read_and_segment()
 
     def _read_and_segment(self):
-        image = self._image_file_reader.read_file(self._image_path)
-        pca_segmentation_task = self._pca_segmenter.create_segmentation_task(image, self._segmentation_mode)
+        raster = self._image_file_reader.read_file(self._image_path)
+        pca_segmentation_task = self._pca_segmenter.create_segmentation_task(raster, self._segmentation_mode)
         pca_segmentation_task.progress_changed.connect(self.progress_changed)
         pca_segmentation_task.run()
-        masks = pca_segmentation_task.result
-        return self._pca_segmenter.combine_class_masks(masks)
+        class_masks_per_segmenter = pca_segmentation_task.result
+        return self._pca_segmenter.combine_class_masks(class_masks_per_segmenter)
