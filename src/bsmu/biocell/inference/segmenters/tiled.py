@@ -14,7 +14,7 @@ from PySide6.QtCore import QObject
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.palette import Palette
 from bsmu.vision.core.task import DnnTask
-from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
+from bsmu.vision.dnn.inferencer import ImageModelConfig as DnnModelConfig
 from bsmu.vision.dnn.segmenter import Segmenter as DnnSegmenter
 
 if TYPE_CHECKING:
@@ -59,23 +59,23 @@ _SEGMENTATION_MODE_TO_DISPLAY_SHORT_NAME = {
 class MultipassTiledSegmenter(QObject):
     def __init__(
             self,
-            model_params: DnnModelParams,
+            model_config: DnnModelConfig,
             mask_palette: Palette,
             task_storage: TaskStorage = None,
     ):
         super().__init__()
 
-        self._model_params = model_params
+        self._model_config = model_config
         self._task_storage = task_storage
 
         self._mask_palette = mask_palette
         self._mask_background_class = self._mask_palette.row_index_by_name('background')
         self._mask_foreground_classes = tuple(
             self._mask_palette.row_index_by_name(name)
-            for name in model_params.output_class_names
+            for name in model_config.output_class_names
         )
 
-        self._segmenter = DnnSegmenter(self._model_params)
+        self._segmenter = DnnSegmenter(self._model_config)
 
     @property
     def segmenter(self) -> DnnSegmenter:
@@ -102,7 +102,7 @@ class MultipassTiledSegmenter(QObject):
         segmentation_profile = MultipassTiledSegmentationProfile(
             self._segmenter, segmentation_mode, self._mask_background_class, self._mask_foreground_classes)
         segmentation_task_name = (
-            f'{self._model_params.output_object_short_name} '
+            f'{self._model_config.output_object_short_name} '
             f'{segmentation_mode.short_name_with_postfix} '
             f'[{raster.path_name}]'
         )
@@ -147,12 +147,12 @@ class TiledSegmentationTask(DnnTask):
         self._weights: np.ndarray | None = None
 
     @property
-    def model_params(self) -> DnnModelParams:
-        return self._segmenter.model_params
+    def model_config(self) -> DnnModelConfig:
+        return self._segmenter.model_config
 
     @property
     def tile_size(self) -> int:
-        return self.model_params.input_image_size[0]
+        return self.model_config.input_image_size[0]
 
     @property
     def weights(self) -> np.ndarray | None:
@@ -163,7 +163,7 @@ class TiledSegmentationTask(DnnTask):
         return self._segment_tiled()
 
     def _segment_tiled(self) -> Sequence[np.ndarray]:
-        logging.info(f'Segment image using {self.model_params.path.name} model with {self._extra_pads} extra pads')
+        logging.info(f'Segment image using {self.model_config.path.name} model with {self._extra_pads} extra pads')
         segmentation_start = timer()
 
         image = self._image
@@ -188,7 +188,7 @@ class TiledSegmentationTask(DnnTask):
         self._total_tile_count = self._tile_row_count * self._tile_col_count
 
         segment_tiled_args = (tiled_image, tile_size, padded_masks)
-        if self._segmenter.model_params.batch_size == 1:
+        if self._segmenter.model_config.batch_size == 1:
             self._segment_tiled_individually(*segment_tiled_args)
         else:
             self._segment_tiled_in_batches(*segment_tiled_args)
@@ -197,7 +197,7 @@ class TiledSegmentationTask(DnnTask):
         for i, padded_mask in enumerate(padded_masks):
             mask = self._unpad_image(padded_mask, pads)
             if self._binarize_mask:
-                threshold = self.model_params.mask_binarization_thresholds[i]
+                threshold = self.model_config.mask_binarization_thresholds[i]
                 foreground_class = self._mask_foreground_classes[i]
                 mask = (mask > threshold).astype(np.uint8)
                 mask *= foreground_class
@@ -227,7 +227,7 @@ class TiledSegmentationTask(DnnTask):
                 if tile_mask.ndim == 2:
                     padded_masks[0][row:(row + tile_size), col:(col + tile_size)] = tile_mask
                 else:
-                    channels_axis = self.model_params.channels_axis
+                    channels_axis = self.model_config.channels_axis
                     for class_index in range(len(padded_masks)):
                         tile_channel_mask = np.take(tile_mask, class_index, axis=channels_axis)
                         padded_masks[class_index][row:(row + tile_size), col:(col + tile_size)] = tile_channel_mask
@@ -237,7 +237,7 @@ class TiledSegmentationTask(DnnTask):
 
     def _segment_tiled_in_batches(
             self, tiled_image: np.ndarray, tile_size: int, padded_masks: list[np.ndarray]) -> None:
-        batch_size = self._segmenter.model_params.batch_size
+        batch_size = self._segmenter.model_config.batch_size
 
         tile_batch = []
         tile_rc_batch = []
@@ -274,7 +274,7 @@ class TiledSegmentationTask(DnnTask):
             if tile_mask.ndim == 2:
                 padded_masks[0][mask_row:(mask_row + tile_size), mask_col:(mask_col + tile_size)] = tile_mask
             else:
-                channels_axis = self.model_params.channels_axis
+                channels_axis = self.model_config.channels_axis
                 for class_index in range(len(padded_masks)):
                     tile_channel_mask = np.take(tile_mask, class_index, axis=channels_axis)
                     padded_masks[class_index][
@@ -440,11 +440,11 @@ class MultipassTiledSegmentationProfile:
 
     @property
     def tile_size(self) -> int:
-        return self.segmenter.model_params.input_image_size[0]
+        return self.segmenter.model_config.input_image_size[0]
 
     @property
     def mask_binarization_thresholds(self) -> Sequence[float]:
-        return self.segmenter.model_params.mask_binarization_thresholds
+        return self.segmenter.model_config.mask_binarization_thresholds
 
 
 class MulticlassMultipassTiledSegmentationTask(DnnTask):

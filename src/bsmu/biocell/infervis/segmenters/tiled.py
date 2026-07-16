@@ -124,7 +124,7 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
     def on_data_visualized(self, data: Data, data_viewer_sub_windows: list[DataViewerSubWindow]):
         raise NotImplementedError()
 
-        mask_layer_name = self._segmenter.segmenter.model_params.output_object_name
+        mask_layer_name = self._segmenter.segmenter.model_config.output_object_name
         if not isinstance(data, LayeredData) or (len(data.layers) > 1 and data.layers[1].name == mask_layer_name):
             return
 

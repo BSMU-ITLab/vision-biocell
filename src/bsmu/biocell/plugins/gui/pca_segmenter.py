@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -85,6 +86,10 @@ class PcaSegmenterGuiPlugin(Plugin):
 
         self._data_visualization_manager = self._data_visualization_manager_plugin.data_visualization_manager
         # self._data_visualization_manager.data_visualized.connect(self._pca_gleason_3_segmenter_gui.on_data_visualized)
+
+        if self._pca_segmenter_plugin.pca_segmenter is None:
+            logging.warning('PcaSegmenter is not initialized, skipping GUI setup')
+            return
 
         # Build flat list: one MdiSegmenter per class across all segmenters
         class_mdi_segmenters = []

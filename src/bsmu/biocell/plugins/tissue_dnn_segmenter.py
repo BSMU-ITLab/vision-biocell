@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from bsmu.biocell.inference.segmenters.tiled import MultipassTiledSegmenter
 from bsmu.vision.core.plugins import Plugin
-from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
+from bsmu.vision.dnn.inferencer import ImageModelConfig as DnnModelConfig
 
 if TYPE_CHECKING:
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin
@@ -37,13 +37,13 @@ class TissueDnnSegmenterPlugin(Plugin):
         return self._tissue_segmenter
 
     def _enable(self):
-        tissue_model_params = DnnModelParams.from_config(
-            self.config_value('tissue_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
+        tissue_model_config = DnnModelConfig.from_dict(
+            self.config_value('tissue_segmenter_model'), data_dir=self.data_path())
 
         main_palette = self._palette_pack_settings_plugin.settings.main_palette
         task_storage = self._task_storage_plugin.task_storage
         self._tissue_segmenter = MultipassTiledSegmenter(
-            tissue_model_params, main_palette, task_storage)
+            tissue_model_config, main_palette, task_storage)
 
     def _disable(self):
         self._tissue_segmenter = None

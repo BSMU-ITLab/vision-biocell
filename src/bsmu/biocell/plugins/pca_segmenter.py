@@ -9,7 +9,7 @@ from bsmu.biocell.inference.segmenters.tiled import (
     MulticlassMultipassTiledSegmentationTask)
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.plugins import Plugin
-from bsmu.vision.dnn.inferencer import ImageModelParams as DnnModelParams
+from bsmu.vision.dnn.inferencer import ImageModelConfig as DnnModelConfig
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
@@ -63,22 +63,22 @@ class PcaSegmenterPlugin(Plugin):
 
         pca_model_config_data = self.config_value('pca_segmenter_model', None)
         if pca_model_config_data is not None:
-            pca_model_params = DnnModelParams.from_config(
-                pca_model_config_data, self.data_path(self._DNN_MODELS_DIR_NAME))
+            pca_model_config = DnnModelConfig.from_dict(
+                pca_model_config_data, data_dir=self.data_path())
             pca_multiclass_segmenter = MultipassTiledSegmenter(
-                pca_model_params, main_palette, task_storage)
+                pca_model_config, main_palette, task_storage)
             self._pca_segmenter = PcaSegmenter(
                 [pca_multiclass_segmenter], task_storage)
         else:
-            gleason_3_model_params = DnnModelParams.from_config(
-                self.config_value('gleason_3_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
-            gleason_4_model_params = DnnModelParams.from_config(
-                self.config_value('gleason_4_segmenter_model'), self.data_path(self._DNN_MODELS_DIR_NAME))
+            gleason_3_model_config = DnnModelConfig.from_dict(
+                self.config_value('gleason_3_segmenter_model'), data_dir=self.data_path())
+            gleason_4_model_config = DnnModelConfig.from_dict(
+                self.config_value('gleason_4_segmenter_model'), data_dir=self.data_path())
 
             self._pca_gleason_3_segmenter = MultipassTiledSegmenter(
-                gleason_3_model_params, main_palette, task_storage)
+                gleason_3_model_config, main_palette, task_storage)
             self._pca_gleason_4_segmenter = MultipassTiledSegmenter(
-                gleason_4_model_params, main_palette, task_storage)
+                gleason_4_model_config, main_palette, task_storage)
             self._pca_segmenter = PcaSegmenter(
                 [self._pca_gleason_3_segmenter, self._pca_gleason_4_segmenter],
                 task_storage,
