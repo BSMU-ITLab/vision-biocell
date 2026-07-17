@@ -18,6 +18,9 @@ plugins:
 
   - bsmu.vision.plugins.writers.image.common.CommonImageFileWriterPlugin
 
+  - bsmu.vision.plugins.layers_view.LayersTableViewPlugin
+  - bsmu.vision.plugins.task_storage_view.TaskStorageViewPlugin
+
   - bsmu.vision.plugins.tools.manager.ViewerToolManagerPlugin
   - bsmu.vision.plugins.tools.hand.HandToolPlugin
   - bsmu.biocell.plugins.tools.hed_wsi_smart_brush.HedSmartBrushToolPlugin
@@ -35,8 +38,5 @@ plugins:
 #  - bsmu.vision.plugins.walkers.mask_auto_save.MaskAutoSaveOnWalkPlugin
 
   - bsmu.vision.plugins.layer_controller.MdiImageViewerLayerControllerPlugin
-  - bsmu.vision.plugins.layers_view.LayersTableViewPlugin
-
-  - bsmu.vision.plugins.task_storage_view.TaskStorageViewPlugin
 
   - bsmu.biocell.plugins.gui.palette_view.PaletteViewPlugin

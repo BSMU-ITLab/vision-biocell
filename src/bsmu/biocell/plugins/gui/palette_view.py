@@ -25,19 +25,21 @@ class PaletteViewPlugin(Plugin):
 
         self._main_window_plugin = main_window_plugin
         self._main_window: MainWindow | None = None
-        self._palette_dock: PaletteDockWidget | None = None
+        self._palette_widget: PaletteWidget | None = None
+        self._palette_dock_widget: QDockWidget | None = None
 
     def _enable_gui(self) -> None:
         self._main_window = self._main_window_plugin.main_window
-        self._palette_dock = PaletteDockWidget(parent=self._main_window)
-        self._main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._palette_dock)
+        self._palette_widget = PaletteWidget()
+        self._palette_dock_widget = self._main_window.add_dock_widget(
+            self._palette_widget,
+            self.tr('Palette'),
+        )
 
     def _disable(self) -> None:
-        if self._palette_dock:
-            self._main_window.removeDockWidget(self._palette_dock)
-            self._palette_dock.setParent(None)
-            self._palette_dock.deleteLater()
-            self._palette_dock = None
+        self._main_window.remove_dock_widget(self._palette_dock_widget)
+        self._palette_dock_widget = None
+        self._palette_widget = None
         self._main_window = None
 
 
@@ -94,8 +96,8 @@ class PaletteItem:
     label: str
 
 
-class PaletteDockWidget(QDockWidget):
-    """Display a named color palette in a dock widget."""
+class PaletteWidget(QWidget):
+    """Display a named color palette."""
 
     GLEASON_PALETTE: ClassVar[tuple[PaletteItem, ...]] = (
         PaletteItem('#FFFF00', 'Gleason 3'),
@@ -113,13 +115,12 @@ class PaletteDockWidget(QDockWidget):
         items: Iterable[PaletteItem] = GLEASON_PALETTE,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__('Palette', parent)
+        super().__init__(parent)
 
         self._init_ui(items)
 
     def _init_ui(self, items: Iterable[PaletteItem]) -> None:
-        container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
 
@@ -127,7 +128,6 @@ class PaletteDockWidget(QDockWidget):
             layout.addLayout(self._create_row(item))
 
         layout.addStretch(1)
-        self.setWidget(container)
 
     @staticmethod
     def _create_row(item: PaletteItem) -> QHBoxLayout:
