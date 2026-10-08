@@ -1,4 +1,4 @@
-git+https://github.com/BSMU-ITLab/vision.git@v0.49.0
+git+https://github.com/BSMU-ITLab/vision.git@v0.50.15
 coloredlogs==15.0.1
 cx_Freeze==7.2.5
 cx_Logging==3.2.1
@@ -24,7 +24,7 @@ ruamel.yaml.clib==0.2.12
 scikit-image==0.24.0
 scipy==1.14.1
 shiboken6==6.8.0.2
-slideio==2.6.3
+slideio==2.10.0
 sortedcontainers==2.4.0
 sympy==1.13.3
 tifffile==2024.9.20

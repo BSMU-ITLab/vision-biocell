@@ -1,18 +1,52 @@
 pca_segmenter_model:
-  path: 'dnn-models/v10-678-64-segformer-sum-tu-convnext_base.fb_in22k_ft_in1k_384-panda+empty(384, 384)[(3, 4, 5), (4, 5)].onnx'
+  path: 'dnn-models/v12-segformer-sum-tu-convnext_base.dinov3_lvd1689m-panda+empty(768, 768)[(3, 4, 5), (4, 5), (5,)].onnx'
   output_object_name: 'Prostate Cancer'
   output_object_short_name: 'PCa'
   preload: false
-  batch_size: 12
-  input_size: [3, 384, 384]
+  batch_size: 4
+  input_size: [3, 768, 768]
   channels_axis: 0
   channels_order: 'rgb'
   normalize: false
   preprocessing_mode: ''
   input_type: 'uint8'
-  output_channels: [0, 1]
-  output_class_names: ['gleason_3', 'gleason_4']
-  mask_binarization_thresholds: [0.8473, 1.0986]
+  output_channels: [0, 1, 2]
+  output_class_names: ['gleason_3', 'gleason_4', 'gleason_5']
+  mask_binarization_thresholds: [0.0, 0.0, 0.0]
+
+
+#pca_segmenter_model:
+#  path: 'dnn-models/v12-segformer-sum-tu-convnext_base.dinov3_lvd1689m-panda+empty(384, 384)[(3, 4, 5), (4, 5), (5,)].onnx'
+#  output_object_name: 'Prostate Cancer'
+#  output_object_short_name: 'PCa'
+#  preload: false
+#  batch_size: 12
+#  input_size: [3, 384, 384]
+#  channels_axis: 0
+#  channels_order: 'rgb'
+#  normalize: false
+#  preprocessing_mode: ''
+#  input_type: 'uint8'
+#  output_channels: [0, 1, 2]
+#  output_class_names: ['gleason_3', 'gleason_4', 'gleason_5']
+#  mask_binarization_thresholds: [0.0, 0.0, 0.0]
+
+
+#pca_segmenter_model:
+#  path: 'dnn-models/v10-678-64-segformer-sum-tu-convnext_base.fb_in22k_ft_in1k_384-panda+empty(384, 384)[(3, 4, 5), (4, 5)].onnx'
+#  output_object_name: 'Prostate Cancer'
+#  output_object_short_name: 'PCa'
+#  preload: false
+#  batch_size: 12
+#  input_size: [3, 384, 384]
+#  channels_axis: 0
+#  channels_order: 'rgb'
+#  normalize: false
+#  preprocessing_mode: ''
+#  input_type: 'uint8'
+#  output_channels: [0, 1]
+#  output_class_names: ['gleason_3', 'gleason_4']
+#  mask_binarization_thresholds: [0.8473, 1.0986]
 
 
 #gleason_3_segmenter_model:  # trained on Gleason >= 3

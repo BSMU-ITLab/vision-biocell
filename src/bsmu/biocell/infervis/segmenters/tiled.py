@@ -4,6 +4,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
+from PySide6.QtWidgets import QMessageBox
 
 from bsmu.biocell.inference.segmenters.tiled import SegmentationMode
 from bsmu.biocell.infervis.segmenters.mdi import MaskDrawMode
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from typing import Sequence
 
     from bsmu.vision.core.data import Data
+    from bsmu.vision.core.data.raster import Raster
     from bsmu.vision.plugins.doc_interfaces.mdi import Mdi
     from bsmu.vision.widgets.mdi.windows.data import DataViewerSubWindow
     from bsmu.biocell.inference.segmenters.tiled import MultipassTiledSegmenter
@@ -48,11 +50,20 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
         if raster is None:
             return
 
+        if not raster.is_tiled:
+            QMessageBox.warning(
+                self._mdi.activeSubWindow(),
+                self.tr('Segmentation'),
+                self.tr('Segmentation is only supported for WSI (tiled) images.')
+            )
+            return
+
         on_finished = partial(
             self._on_segmentation_finished,
             layered_data=layered_data,
             mask_layer_name=mask_layer_name,
             mask_draw_mode=mask_draw_mode,
+            reference_raster=raster,
         )
         self._segmenter.segment_async(raster, segmentation_mode, on_finished)
 
@@ -62,10 +73,12 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
             layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
+            reference_raster: Raster | None = None,
     ):
         # For single-class segmenters: masks has 1 element
         # For multiclass segmenters called individually: masks has N elements, but we only draw our class_index
-        self.update_mask_layer(masks[self._class_index], layered_data, mask_layer_name, mask_draw_mode)
+        self.update_mask_layer(
+            masks[self._class_index], layered_data, mask_layer_name, mask_draw_mode, reference_raster)
 
     def update_mask_layer_partially(
             self,
@@ -92,6 +105,7 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
             layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
+            reference_raster: Raster | None = None,
     ) -> np.ndarray | None:
         mask_layer = layered_data.layer_by_name(mask_layer_name)
         if mask_layer is not None and not isinstance(mask_layer, RasterLayer):
@@ -102,13 +116,15 @@ class MultipassTiledMdiSegmenter(MdiSegmenter):
 
         is_modified = None
         if mask_draw_mode == MaskDrawMode.REDRAW_ALL or mask_layer is None or not mask_layer.is_raster_pixels_valid:
-            layered_data.add_layer_or_modify_pixels(
+            mask_layer = layered_data.add_layer_or_modify_pixels(
                 mask_layer_name,
                 mask,
                 FlatImage,
                 self._segmenter.mask_palette,
                 visibility=Visibility(True, 0.75),
             )
+            if reference_raster is not None:
+                mask_layer.data.fit_spacing_to(reference_raster)
         elif mask_draw_mode == MaskDrawMode.OVERLAY_FOREGROUND:
             is_modified = mask == self.mask_foreground_class
             mask_layer.raster_pixels[is_modified] = self.mask_foreground_class

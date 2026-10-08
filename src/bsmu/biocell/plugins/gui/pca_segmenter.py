@@ -5,6 +5,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
+from PySide6.QtWidgets import QMessageBox
 
 from bsmu.biocell.inference.segmenters.tiled import SegmentationMode
 from bsmu.biocell.infervis.segmenters.mdi import MaskDrawMode, MdiSegmenter
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from typing import Sequence, Callable
 
     from bsmu.biocell.plugins.pca_segmenter import PcaSegmenter, PcaSegmenterPlugin
+    from bsmu.vision.core.data.raster import Raster
     from bsmu.vision.plugins.doc_interfaces.mdi import MdiPlugin, Mdi
     from bsmu.vision.plugins.palette.settings import PalettePackSettingsPlugin, PalettePackSettings
     from bsmu.vision.plugins.windows.main import MainWindowPlugin, MainWindow
@@ -194,11 +196,21 @@ class PcaMdiSegmenter(MdiSegmenter):
         if raster is None:
             return
 
+        if not raster.is_tiled:
+            QMessageBox.warning(
+                self._mdi.activeSubWindow(),
+                self.tr('Segmentation'),
+                self.tr('Segmentation is only supported for WSI (tiled) images. '
+                        'The current image does not have reliable physical resolution metadata.')
+            )
+            return
+
         on_finished = partial(
             self._on_pca_segmentation_finished,
             layered_data=layered_data,
             mask_layer_name=mask_layer_name,
             mask_draw_mode=mask_draw_mode,
+            reference_raster=raster,
         )
         self._pca_segmenter.segment_async(raster, segmentation_mode, on_finished)
 
@@ -208,6 +220,7 @@ class PcaMdiSegmenter(MdiSegmenter):
             layered_data: LayeredData,
             mask_layer_name: str,
             mask_draw_mode: MaskDrawMode = MaskDrawMode.REDRAW_ALL,
+            reference_raster: Raster | None = None,
     ):
         # Flatten to match class_mdi_segmenters one-to-one
         all_masks = []
@@ -217,7 +230,7 @@ class PcaMdiSegmenter(MdiSegmenter):
         # Apply the passed `mask_draw_mode` only to draw the first mask
         first = 0
         modifiable_mask = self._class_mdi_segmenters[first].update_mask_layer(
-            all_masks[first], layered_data, mask_layer_name, mask_draw_mode)
+            all_masks[first], layered_data, mask_layer_name, mask_draw_mode, reference_raster)
 
         # Apply other draw modes for subsequent masks to preserve already drawn masks
         if mask_draw_mode == MaskDrawMode.REDRAW_ALL or mask_draw_mode == MaskDrawMode.OVERLAY_FOREGROUND:

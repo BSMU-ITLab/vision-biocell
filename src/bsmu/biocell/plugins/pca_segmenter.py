@@ -117,22 +117,17 @@ class PcaSegmenter(QObject):
     def create_segmentation_task(
             self,
             raster: Raster,
-            segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY
+            segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
     ) -> MulticlassMultipassTiledSegmentationTask:
-
-        segmentation_profiles = []
-        for class_segmenter in self._class_segmenters:
-            segmentation_profiles.append(
-                MultipassTiledSegmentationProfile(
-                    class_segmenter.segmenter,
-                    segmentation_mode,
-                    class_segmenter.mask_background_class,
-                    class_segmenter.mask_foreground_classes,
-                )
+        if not raster.is_tiled:
+            raise ValueError(
+                'Segmentation is only supported for tiled (WSI) rasters with known MPP.'
             )
+
         pca_segmentation_task_name = f'PCa {segmentation_mode.short_name_with_postfix} [{raster.path_name}]'
+
         return MulticlassMultipassTiledSegmentationTask(
-            raster.pixels, segmentation_profiles, pca_segmentation_task_name)
+            raster, self.class_segmenters, segmentation_mode, pca_segmentation_task_name)
 
     def combine_class_masks(self, class_masks_per_segmenter: Sequence[Sequence[np.ndarray]]) -> np.ndarray:
         fg_class_to_mask_pairs = []

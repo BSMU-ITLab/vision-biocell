@@ -34,7 +34,7 @@ plugins:
   - bsmu.biocell.plugins.gui.isup_analysis.IsupAnalysisPlugin
 #  - bsmu.biocell.plugins.kidney_tissue_segmenter.KidneyTissueSegmenterPlugin
 
-#  - bsmu.vision.plugins.walkers.file.MdiImageLayerFileWalkerPlugin
+  - bsmu.vision.plugins.walkers.file.MdiImageLayerFileWalkerPlugin
 #  - bsmu.vision.plugins.walkers.mask_auto_save.MaskAutoSaveOnWalkPlugin
 
   - bsmu.vision.plugins.layer_controller.MdiImageViewerLayerControllerPlugin

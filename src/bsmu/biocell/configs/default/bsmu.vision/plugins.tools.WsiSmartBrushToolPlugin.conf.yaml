@@ -1,5 +1,6 @@
-radius: 600
-min_radius: 4
-max_radius: 2200
+radius: 4800
+min_radius: 28
+max_radius: 17600
+max_radius_without_downscale: 1200
 
 smart_mode_enabled: false
