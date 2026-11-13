@@ -10,8 +10,8 @@ main_palette:
     seminal_vesicles: [   6,   0, 255, 255, 255 ]
     nerve_trunk:      [   7,   0,   0, 255, 255 ]
     not_cancer:       [   8,   0, 255,   0, 255 ]
-    unknown:          [   9,   0,   0,   0, 255 ]
-    non_tissue:       [ 255,  70, 191,   0, 255 ]
+    unknown:          [   9,   0,   0,   0, 224 ]
+    non_tissue:       [ 255,   0,  64,  21, 192 ]
 
 ## For tissue segmentation on biopsy scans
 #main_palette:

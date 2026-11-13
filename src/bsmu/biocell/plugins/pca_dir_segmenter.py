@@ -11,14 +11,14 @@ from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.config import Config
 from bsmu.vision.core.image import FlatImage
 from bsmu.vision.core.task import DnnTask
-from bsmu.vision.plugins.readers.image.wsi import WholeSlideImageFileReader
-from bsmu.vision.plugins.writers.image.common import CommonImageFileWriter
+from bsmu.vision.io.raster.common import CommonRasterFileWriter
+from bsmu.vision.io.raster.wsi.reader import WholeSlideRasterFileReader
 
 if TYPE_CHECKING:
     from typing import Sequence
 
     from bsmu.biocell.plugins.pca_segmenter import PcaSegmenter
-    from bsmu.vision.plugins.readers.image import ImageFileReader
+    from bsmu.vision.core.io.raster import RasterFileReader
     from bsmu.vision.plugins.storages.task import TaskStorage
 
 
@@ -42,7 +42,7 @@ class PcaDirSegmenter(QObject):
         if (not config.image_dir.is_dir()) or (config.mask_dir.exists() and not config.mask_dir.is_dir()):
             return False
 
-        wsi_file_reader = WholeSlideImageFileReader()
+        wsi_file_reader = WholeSlideRasterFileReader()
         pca_dir_segmentation_task_name = (
             self.tr(f'PCa Dir {config.segmentation_mode.short_name_with_postfix} [{config.image_dir.name}]')
         )
@@ -58,7 +58,7 @@ class PcaDirSegmentationTask(DnnTask):
     def __init__(
             self,
             config: DirSegmentationConfig,
-            file_reader: ImageFileReader,
+            file_reader: RasterFileReader,
             pca_segmenter: PcaSegmenter,
             name: str = '',
     ):
@@ -77,7 +77,7 @@ class PcaDirSegmentationTask(DnnTask):
     def _segment_dir_files(self):
         self._prepare_relative_image_paths()
 
-        image_file_writer = CommonImageFileWriter()
+        image_file_writer = CommonRasterFileWriter()
         for self._finished_subtask_count, relative_image_path in enumerate(self._relative_image_paths):
             image_path = self._config.image_dir / relative_image_path
             file_reading_and_segmentation_task = PcaFileReadingAndSegmentationTask(
@@ -115,7 +115,7 @@ class PcaFileReadingAndSegmentationTask(DnnTask):
     def __init__(
             self,
             image_path: Path,
-            image_file_reader: ImageFileReader,
+            image_file_reader: RasterFileReader,
             pca_segmenter: PcaSegmenter,
             segmentation_mode: SegmentationMode = SegmentationMode.HIGH_QUALITY,
             name: str = ''
