@@ -11,11 +11,11 @@ import skimage.io
 import skimage.util
 from PySide6.QtCore import QObject
 
+from bsmu.biocell.inference.inferencer import DnnModelConfig
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.data.raster import TILED_MASK_DOWNSAMPLE
 from bsmu.vision.core.palette import Palette
 from bsmu.vision.core.task import DnnTask
-from bsmu.vision.dnn.inferencer import ImageModelConfig as DnnModelConfig
 from bsmu.vision.dnn.segmenter import Segmenter as DnnSegmenter
 
 if TYPE_CHECKING:
@@ -232,6 +232,7 @@ class TiledSegmentationTask(DnnTask):
             else tuple(mask_foreground_classes),
             dtype=np.uint8,
         )
+        self._mask_argmax = self.model_config.output_argmax
 
         if tile_weights is not None:
             tile_weights = tile_weights[:, :, None]
@@ -307,7 +308,7 @@ class TiledSegmentationTask(DnnTask):
         # because this Task can be cancelled, and then we have to return correct partial mask
         label_classes = len(self._mask_foreground_classes)
         labeled_mask = np.full(
-            tuple(image.shape[:2]) + (label_classes,),
+            tuple(image.shape[:2]),
             self._mask_background_class, dtype=np.uint8,
         )
         padded_labeled_mask = PaddedArray(labeled_mask)
@@ -402,8 +403,6 @@ class TiledSegmentationTask(DnnTask):
         ] = partial_mask
         self.update_progress(tiles_column_count)
 
-        labeled_mask *= self._mask_foreground_classes
-
         t_inference = timer() - t_inference_start
         t_total_elapsed = timer() - t_total
         logging.info(
@@ -415,7 +414,7 @@ class TiledSegmentationTask(DnnTask):
         )
 
         # Return contiguous copies to avoid performance issues with non-contiguous arrays in downstream operations.
-        return [np.ascontiguousarray(m) for m in np.moveaxis(labeled_mask, 2, 0)]
+        return [labeled_mask]
 
     def get_row_tiles(self, image: PaddedArray, row_slice: slice, slices: list[slice]):
         tiles = []
@@ -446,9 +445,21 @@ class TiledSegmentationTask(DnnTask):
         return preds
 
     def pred_to_mask(self, preds: np.ndarray, weights: np.ndarray, thresholds: np.ndarray):
-        full_predictions = preds / np.maximum(weights, 1e-9)
-        binary_predictions = np.where(weights > 0, full_predictions > thresholds, 0).astype(np.uint8)
-        return binary_predictions
+        not_valid_mask = (weights <= 0).squeeze(-1)
+
+        if self._mask_argmax:
+            int_mask = (preds - (thresholds * weights)).argmax(-1)
+            int_mask = self._mask_foreground_classes[int_mask]
+        else:
+            # (preds / weights > thresh) == (preds > thresh * weigths) but without zero division problem
+            exceeds = preds > (thresholds * weights)
+            int_mask = (exceeds * self._mask_foreground_classes).max(-1) # keep bigger classes
+
+            if self._mask_background_class != 0:
+                not_valid_mask = not_valid_mask | (int_mask == 0)
+
+        int_mask[not_valid_mask] = self._mask_background_class
+        return int_mask
 
 
 class TiledSegmentationTask_OLD(DnnTask):
