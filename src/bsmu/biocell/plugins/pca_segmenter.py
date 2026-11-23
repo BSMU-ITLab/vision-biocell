@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject
 
+from bsmu.biocell.inference.inferencer import DnnModelConfig
 from bsmu.biocell.inference.segmenters.tiled import (
     MultipassTiledSegmenter, SegmentationMode, MultipassTiledSegmentationProfile,
     MulticlassMultipassTiledSegmentationTask)
 from bsmu.vision.core.concurrent import ThreadPool
 from bsmu.vision.core.plugins import Plugin
-from bsmu.vision.dnn.inferencer import ImageModelConfig as DnnModelConfig
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
@@ -130,20 +130,13 @@ class PcaSegmenter(QObject):
             raster, self.class_segmenters, segmentation_mode, pca_segmentation_task_name)
 
     def combine_class_masks(self, class_masks_per_segmenter: Sequence[Sequence[np.ndarray]]) -> np.ndarray:
-        fg_class_to_mask_pairs = []
-        for segmenter_masks, segmenter in zip(class_masks_per_segmenter, self._class_segmenters):
-            for mask, foreground_class in zip(segmenter_masks, segmenter.mask_foreground_classes):
-                fg_class_to_mask_pairs.append((foreground_class, mask))
+        combined_mask = None
 
-        if not fg_class_to_mask_pairs:
-            raise ValueError('No masks to combine')
+        for segmenter_masks in class_masks_per_segmenter:
+            for mask in segmenter_masks:
+                if combined_mask is None:
+                    combined_mask = mask
+                else:
+                    combined_mask = np.maximum(combined_mask, mask)
 
-        # Sort by class value: higher class overrides lower class
-        sorted_fg_class_to_mask_pairs = sorted(fg_class_to_mask_pairs, key=lambda x: x[0])
-
-        combined_mask = sorted_fg_class_to_mask_pairs[0][1].copy()
-        # Skip first elements, because the `combined_mask` already contains the first mask
-        for foreground_class, mask in sorted_fg_class_to_mask_pairs[1:]:
-            is_foreground = mask == foreground_class
-            combined_mask[is_foreground] = foreground_class
         return combined_mask
